@@ -3,8 +3,9 @@ import base64
 import io
 import unittest
 import wave
+from unittest.mock import AsyncMock, patch
 
-from benchmark import percentile, run_batch
+from benchmark import monitor_workers, percentile, run_batch
 
 
 class Endpoint:
@@ -48,3 +49,16 @@ class BenchmarkTests(unittest.IsolatedAsyncioTestCase):
     def test_percentile(self):
         self.assertEqual(percentile([8, 2, 1, 4], 0.5), 2)
         self.assertEqual(percentile([8, 2, 1, 4], 0.95), 8)
+
+    async def test_monitor_retains_only_allowlisted_fields(self):
+        stopped = asyncio.Event()
+        process = AsyncMock(returncode=0)
+        async def communicate():
+            stopped.set()
+            return b'[{"id":1,"status":"ready","api_key":"private"}]', b''
+        process.communicate.side_effect = communicate
+        samples = []
+        with patch('asyncio.create_subprocess_exec', AsyncMock(return_value=process)):
+            await monitor_workers(42781, samples, stopped)
+        self.assertEqual(samples[0]['workers'][0]['id'], 1)
+        self.assertNotIn('api_key', samples[0]['workers'][0])

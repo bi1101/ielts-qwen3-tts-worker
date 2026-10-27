@@ -63,6 +63,21 @@ async def run_batch(endpoint, size: int, jobs: int | None = None) -> dict:
     return {"concurrency": size, "jobs": count, "succeeded": len(successes), "failed": count - len(successes), "elapsed_seconds": round(elapsed, 3), "jobs_per_minute": round(len(successes) / elapsed * 60, 2), "latency_p50_seconds": percentile(latencies, 0.5), "latency_p95_seconds": percentile(latencies, 0.95), "requests": results}
 
 
+async def monitor_workers(endpoint_id: int, samples: list, stopped: asyncio.Event):
+    while not stopped.is_set():
+        process = await asyncio.create_subprocess_exec("vastai", "get", "endpt-workers", str(endpoint_id), "--raw", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        stdout, _ = await process.communicate()
+        if process.returncode:
+            samples.append({"timestamp": time.time(), "error": "Vast CLI monitor failed", "exit_code": process.returncode})
+            return
+        workers = json.loads(stdout)
+        samples.append({"timestamp": time.time(), "workers": [{key: worker.get(key) for key in ("id", "gpu_name", "status", "reqs_working", "cur_load", "cur_perf")} for worker in workers]})
+        try:
+            await asyncio.wait_for(stopped.wait(), timeout=5)
+        except asyncio.TimeoutError:
+            pass
+
+
 async def main() -> None:
     from vastai import CoroutineServerless
     parser = argparse.ArgumentParser()
@@ -70,14 +85,20 @@ async def main() -> None:
     parser.add_argument("--sizes", default="1,2,4,8")
     parser.add_argument("--jobs", type=int, help="Total requests per concurrency level; default one burst")
     parser.add_argument("--output", default="benchmark-results.json")
+    parser.add_argument("--monitor-endpoint-id", type=int, help="Sample worker scaling using the installed Vast CLI")
     args = parser.parse_args()
     sizes = [int(value) for value in args.sizes.split(",")]
     if not sizes or any(not 1 <= size <= 512 for size in sizes) or (args.jobs is not None and args.jobs < 1):
         parser.error("sizes must be 1-512 and jobs positive")
     client = CoroutineServerless(api_key=os.environ["VAST_API_KEY"], default_request_timeout=900)
     results = {"backend": "vllm-omni-online", "endpoint": args.endpoint, "started_at": time.time(), "text": TEXT, "seed": 0, "max_new_tokens": 256, "runs": []}
+    stopped = asyncio.Event()
+    monitor = None
     try:
         endpoint = await client.get_endpoint(name=args.endpoint)
+        if args.monitor_endpoint_id is not None:
+            results["worker_samples"] = []
+            monitor = asyncio.create_task(monitor_workers(args.monitor_endpoint_id, results["worker_samples"], stopped))
         for size in sizes:
             row = await run_batch(endpoint, size, args.jobs)
             results["runs"].append(row)
@@ -88,7 +109,13 @@ async def main() -> None:
             temp.replace(target)
             print(json.dumps({key: value for key, value in row.items() if key != "requests"}), flush=True)
     finally:
-        await client.close()
+        stopped.set()
+        try:
+            if monitor:
+                await monitor
+                Path(args.output).write_text(json.dumps(results, indent=2) + "\n")
+        finally:
+            await client.close()
 
 
 if __name__ == "__main__":

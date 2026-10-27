@@ -95,7 +95,8 @@ async def _warm_voice(name: str) -> None:
 async def _prepare_voices() -> None:
     assert _http_session is not None
     async with _http_session.get(f"{VLLM_URL}/v1/audio/voices", timeout=30) as response:
-        if response.status != 200 or set((await response.json()).get("voices", [])) != set(VOICES):
+        # Omni also advertises a built-in `default` alias.
+        if response.status != 200 or not set(VOICES).issubset((await response.json()).get("voices", [])):
             raise RuntimeError("vLLM-Omni did not preload all eight voice profiles")
     await asyncio.gather(*(_warm_voice(name) for name in VOICES))
 
