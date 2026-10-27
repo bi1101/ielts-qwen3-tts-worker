@@ -47,7 +47,9 @@ SQLite WAL stores the content hash, request ID, attempts, status, output path an
 ## Benchmarking
 
 ```bash
-python benchmark.py --endpoint ielts-qwen3-tts --sizes 1,2,4,8 --output benchmark-results.json
+python benchmark.py --endpoint ielts-qwen3-tts --sizes 8,16,32,64,128 --jobs 128 --output benchmark-results.json
 ```
 
 Run one request first to measure cold-start latency, repeat it for warm latency, then run each concurrency level and inspect endpoint workers/logs for scaling and GPU memory. Do not claim a throughput comparison until both backends have been measured on the same GPU and voice mix.
+
+The deployed concurrency sweep passed 640/640 requests. On one RTX 5090, throughput leveled off at concurrency 16 (~238 jobs/min); 128 in flight also succeeded but raised p95 latency to ~31s. See [the report](benchmarks/concurrency-2026-10-27.md) for the workload, per-request evidence, GPU readings, and limits. Fixed seeds did not give byte-identical audio under continuous batching.
