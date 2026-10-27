@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import io
 import json
 import logging
@@ -56,7 +57,7 @@ def _load_model() -> None:
     _write_log("QWEN_TTS_READY")
 
 
-def _generate(body: dict[str, Any]) -> bytes:
+def _generate(body: dict[str, Any]) -> tuple[bytes, int]:
     text = body.get("input")
     voice = body.get("voice", "alex")
     response_format = body.get("response_format", "wav")
@@ -79,7 +80,7 @@ def _generate(body: dict[str, Any]) -> bytes:
             )
         output = io.BytesIO()
         sf.write(output, wavs[0], sample_rate, format="WAV", subtype="PCM_16")
-        return output.getvalue()
+        return output.getvalue(), sample_rate
 
 
 async def health(_request: aiohttp.web.Request) -> aiohttp.web.Response:
@@ -90,13 +91,13 @@ async def health(_request: aiohttp.web.Request) -> aiohttp.web.Response:
 async def speech(request: aiohttp.web.Request) -> aiohttp.web.Response:
     try:
         body = await request.json()
-        audio = await asyncio.to_thread(_generate, body)
+        audio, sample_rate = await asyncio.to_thread(_generate, body)
     except ValueError as exc:
         return aiohttp.web.json_response({"error": str(exc)}, status=400)
     except Exception:
         log.exception("TTS request failed")
         return aiohttp.web.json_response({"error": "TTS generation failed"}, status=500)
-    return aiohttp.web.Response(body=audio, content_type="audio/wav", headers={"Content-Disposition": "attachment; filename=speech.wav"})
+    return aiohttp.web.json_response({"audio_base64": base64.b64encode(audio).decode("ascii"), "sample_rate": sample_rate, "format": "wav", "voice": body.get("voice", "alex")})
 
 
 @asynccontextmanager
