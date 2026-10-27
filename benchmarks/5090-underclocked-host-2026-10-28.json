@@ -1,0 +1,19 @@
+{
+  "worker_id": 57999628,
+  "machine_id": 153110,
+  "excluded_from_tuning": true,
+  "reason": "Under sustained native endpoint load, GPU stayed in P8 at ~210 MHz SM / 405 MHz memory while reporting 100% utilization and ~37 W. Not representative of healthy 5090 performance.",
+  "observed_samples_utc": [
+    "2026-10-27 18:57:06",
+    "2026-10-27 18:57:13"
+  ],
+  "memory_used_mib": 12225,
+  "gpu_util_percent": 100,
+  "sm_clock_mhz": 210,
+  "memory_clock_mhz": 405,
+  "power_watts_approx": 37,
+  "power_limit_watts": 400,
+  "advertised_dlperf": 5.091333037414577,
+  "audio_acceptance_passed": true,
+  "telemetry_csv_copy_completed": false
+}

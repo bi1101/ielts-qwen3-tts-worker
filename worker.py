@@ -45,11 +45,14 @@ def _vllm_command() -> list[str]:
     # Extend the installed, tested pipeline with preloaded profiles; vLLM owns scheduling.
     source = Path(importlib.util.find_spec("vllm_omni").origin).parent / "deploy/qwen3_tts.yaml"
     deploy = Path("/workspace/tts-deploy.yaml")
-    deploy.write_text("custom_voice_dir: " + json.dumps(str(ROOT / "voice_profiles")) + "\n" + source.read_text())
+    base = source.read_text()
+    base = base.replace("decode_batch_max_size: 4", "decode_batch_max_size: 4\n      decode_cudagraph_batch_sizes: [1, 2, 3, 4]")
+    base = base.replace("custom_voice_dir: ", "custom_voice_dir: ")
+    deploy.write_text("custom_voice_dir: " + json.dumps(str(ROOT / "voice_profiles")) + "\n" + base)
     return [
         sys.executable, "-m", "vllm.entrypoints.cli.main", "serve", MODEL_ID, "--omni", "--host", "127.0.0.1", "--port", "18000",
-        "--deploy-config", str(deploy), "--trust-remote-code", "--enforce-eager",
-        "--stage-overrides", '{"0":{"max_num_seqs":8},"1":{"max_num_seqs":8}}',
+        "--deploy-config", str(deploy), "--trust-remote-code",
+        "--stage-overrides", '{"0":{"max_num_seqs":16},"1":{"max_num_seqs":16}}',
     ]
 
 

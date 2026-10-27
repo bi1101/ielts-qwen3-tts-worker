@@ -1,0 +1,195 @@
+{
+  "backend": "vllm-omni-online",
+  "endpoint": "ielts-qwen3-tts",
+  "started_at": 1793127364.4508982,
+  "text": "Ready for today's science challenge? Think carefully, and explain how you reached your answer.",
+  "seed": 0,
+  "max_new_tokens": 256,
+  "runs": [],
+  "worker_samples": [
+    {
+      "timestamp": 1793127368.0696087,
+      "workers": [
+        {
+          "id": 57999628,
+          "gpu_name": "RTX 5090",
+          "status": "idle",
+          "reqs_working": 16,
+          "cur_load": 18560.0,
+          "cur_perf": 81.34515382186054
+        }
+      ]
+    },
+    {
+      "timestamp": 1793127374.5505347,
+      "workers": [
+        {
+          "id": 57999628,
+          "gpu_name": "RTX 5090",
+          "status": "idle",
+          "reqs_working": 16,
+          "cur_load": 18560.0,
+          "cur_perf": 81.34515382186054
+        }
+      ]
+    },
+    {
+      "timestamp": 1793127381.0806458,
+      "workers": [
+        {
+          "id": 57999628,
+          "gpu_name": "RTX 5090",
+          "status": "idle",
+          "reqs_working": 16,
+          "cur_load": 18560.0,
+          "cur_perf": 81.34515382186054
+        }
+      ]
+    },
+    {
+      "timestamp": 1793127387.5298858,
+      "workers": [
+        {
+          "id": 57999628,
+          "gpu_name": "RTX 5090",
+          "status": "idle",
+          "reqs_working": 16,
+          "cur_load": 18560.0,
+          "cur_perf": 149.56462193437633
+        }
+      ]
+    },
+    {
+      "timestamp": 1793127394.062941,
+      "workers": [
+        {
+          "id": 57999628,
+          "gpu_name": "RTX 5090",
+          "status": "idle",
+          "reqs_working": 17,
+          "cur_load": 19720.0,
+          "cur_perf": 1997.9210595368017
+        }
+      ]
+    },
+    {
+      "timestamp": 1793127400.5876822,
+      "workers": [
+        {
+          "id": 57999628,
+          "gpu_name": "RTX 5090",
+          "status": "idle",
+          "reqs_working": 16,
+          "cur_load": 18560.0,
+          "cur_perf": 1997.9210595368017
+        }
+      ]
+    },
+    {
+      "timestamp": 1793127407.0653884,
+      "workers": [
+        {
+          "id": 57999628,
+          "gpu_name": "RTX 5090",
+          "status": "idle",
+          "reqs_working": 16,
+          "cur_load": 18560.0,
+          "cur_perf": 1997.9210595368017
+        }
+      ]
+    },
+    {
+      "timestamp": 1793127413.5701072,
+      "workers": [
+        {
+          "id": 57999628,
+          "gpu_name": "RTX 5090",
+          "status": "idle",
+          "reqs_working": 16,
+          "cur_load": 18560.0,
+          "cur_perf": 624.7744543985805
+        }
+      ]
+    },
+    {
+      "timestamp": 1793127420.084112,
+      "workers": [
+        {
+          "id": 57999628,
+          "gpu_name": "RTX 5090",
+          "status": "idle",
+          "reqs_working": 16,
+          "cur_load": 18560.0,
+          "cur_perf": 1910.6920637081582
+        }
+      ]
+    },
+    {
+      "timestamp": 1793127426.6012824,
+      "workers": [
+        {
+          "id": 57999628,
+          "gpu_name": "RTX 5090",
+          "status": "idle",
+          "reqs_working": 16,
+          "cur_load": 18560.0,
+          "cur_perf": 170.46708591762246
+        }
+      ]
+    },
+    {
+      "timestamp": 1793127433.077327,
+      "workers": [
+        {
+          "id": 57999628,
+          "gpu_name": "RTX 5090",
+          "status": "idle",
+          "reqs_working": 16,
+          "cur_load": 18560.0,
+          "cur_perf": 171.0307078166502
+        }
+      ]
+    },
+    {
+      "timestamp": 1793127439.5687273,
+      "workers": [
+        {
+          "id": 57999628,
+          "gpu_name": "RTX 5090",
+          "status": "idle",
+          "reqs_working": 16,
+          "cur_load": 18560.0,
+          "cur_perf": 1942.2968058416166
+        }
+      ]
+    },
+    {
+      "timestamp": 1793127446.0944169,
+      "workers": [
+        {
+          "id": 57999628,
+          "gpu_name": "RTX 5090",
+          "status": "idle",
+          "reqs_working": 16,
+          "cur_load": 18560.0,
+          "cur_perf": 1942.2968058416166
+        }
+      ]
+    },
+    {
+      "timestamp": 1793127452.5761688,
+      "workers": [
+        {
+          "id": 57999628,
+          "gpu_name": "RTX 5090",
+          "status": "idle",
+          "reqs_working": 16,
+          "cur_load": 18560.0,
+          "cur_perf": 173.157464626945
+        }
+      ]
+    }
+  ],
+  "excluded_from_comparison": true,
+  "reason": "Interrupted on underclocked worker 57999628; no completed baseline run"
+}

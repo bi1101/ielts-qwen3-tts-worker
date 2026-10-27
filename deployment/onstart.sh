@@ -1,5 +1,9 @@
 #!/bin/bash
 set -euo pipefail
+# The base image can leave SSH keys owned by its build user.
+chown -R root:root /root/.ssh
+chmod 700 /root/.ssh
+chmod 600 /root/.ssh/authorized_keys
 export USE_SYSTEM_PYTHON=true SDK_VERSION=1.9.1
 export PYWORKER_REPO=https://github.com/bi1101/ielts-qwen3-tts-worker
 mkdir -p /workspace

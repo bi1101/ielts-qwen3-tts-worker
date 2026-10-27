@@ -12,6 +12,8 @@ class Endpoint:
     def __init__(self, bad_metadata=False):
         self.active = self.peak = 0
         self.bad_metadata = bad_metadata
+        self.payloads = []
+        self.retry_flags = []
         stream = io.BytesIO()
         with wave.open(stream, "wb") as wav:
             wav.setparams((1, 2, 24_000, 0, "NONE", "not compressed"))
@@ -19,6 +21,8 @@ class Endpoint:
         self.audio = base64.b64encode(stream.getvalue()).decode()
 
     async def request(self, route, payload, **kwargs):
+        self.payloads.append(payload)
+        self.retry_flags.append(kwargs.get("retry"))
         self.active += 1
         self.peak = max(self.peak, self.active)
         await asyncio.sleep(0.001)
@@ -39,6 +43,20 @@ class BenchmarkTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["failed"], 0)
         self.assertEqual(len({r["voice"] for r in result["requests"]}), 8)
         self.assertEqual(len({r["request_id"] for r in result["requests"]}), 24)
+
+    async def test_custom_workload_and_no_hidden_retries(self):
+        endpoint = Endpoint()
+        result = await run_batch(endpoint, 2, 8, text="Longer workload.", max_new_tokens=1024)
+        self.assertTrue(all(p["input"] == "Longer workload." and p["max_new_tokens"] == 1024 for p in endpoint.payloads))
+        self.assertEqual(endpoint.retry_flags, [False] * 8)
+        self.assertGreater(result["audio_seconds_per_second"], 0)
+
+    async def test_invalid_workload_rejected_before_dispatch(self):
+        endpoint = Endpoint()
+        for text, budget in [("", 256), ("x" * 4001, 256), ("Hi", 0), ("Hi", 4097)]:
+            with self.assertRaises(ValueError):
+                await run_batch(endpoint, 2, 8, text=text, max_new_tokens=budget)
+        self.assertEqual(endpoint.payloads, [])
 
     async def test_rejected_metadata_counts_failure(self):
         result = await run_batch(Endpoint(bad_metadata=True), 2, 8)

@@ -21,10 +21,13 @@ def percentile(values: list[float], fraction: float) -> float | None:
     return round(sorted(values)[max(0, math.ceil(len(values) * fraction) - 1)], 3) if values else None
 
 
-async def run_batch(endpoint, size: int, jobs: int | None = None) -> dict:
+async def run_batch(endpoint, size: int, jobs: int | None = None, *, text: str = TEXT, max_new_tokens: int = 256) -> dict:
     count = jobs or size
     if not 1 <= size <= 512 or count < 1:
         raise ValueError("concurrency must be 1-512 and jobs must be positive")
+    if not isinstance(text, str) or not text.strip() or len(text) > 4000 or not 1 <= max_new_tokens <= 4096:
+        raise ValueError("text must contain 1-4000 characters and max_new_tokens must be 1-4096")
+    started_at = time.time()
     started = time.perf_counter()
     indices = iter(range(count))
     results = []
@@ -34,11 +37,11 @@ async def run_batch(endpoint, size: int, jobs: int | None = None) -> dict:
         for index in indices:
             voice = VOICES[index % len(VOICES)]
             request_id = f"bench-{run_id}-{size}-{index}"
-            payload = {"input": TEXT, "voice": voice, "mode": "xvec" if voice.endswith("_xvec") else "icl", "response_format": "wav", "language": "English", "request_id": request_id, "seed": 0, "max_new_tokens": 256}
+            payload = {"input": text, "voice": voice, "mode": "xvec" if voice.endswith("_xvec") else "icl", "response_format": "wav", "language": "English", "request_id": request_id, "seed": 0, "max_new_tokens": max_new_tokens}
             record = {"voice": voice, "request_id": request_id}
             request_start = time.perf_counter()
             try:
-                result = await endpoint.request("/v1/audio/speech", payload, cost=len(TEXT) * 12 + 256 // 8, timeout=900)
+                result = await endpoint.request("/v1/audio/speech", payload, cost=len(text) * 12 + max_new_tokens // 8, timeout=900, retry=False)
                 record["status"] = result.get("status")
                 if not result.get("ok"):
                     raise RuntimeError(f"worker HTTP {result.get('status')}")
@@ -60,7 +63,7 @@ async def run_batch(endpoint, size: int, jobs: int | None = None) -> dict:
     elapsed = time.perf_counter() - started
     successes = [item for item in results if item["ok"]]
     latencies = [item["latency_seconds"] for item in successes]
-    return {"concurrency": size, "jobs": count, "succeeded": len(successes), "failed": count - len(successes), "elapsed_seconds": round(elapsed, 3), "jobs_per_minute": round(len(successes) / elapsed * 60, 2), "latency_p50_seconds": percentile(latencies, 0.5), "latency_p95_seconds": percentile(latencies, 0.95), "requests": results}
+    return {"started_at": started_at, "finished_at": time.time(), "concurrency": size, "jobs": count, "succeeded": len(successes), "failed": count - len(successes), "elapsed_seconds": round(elapsed, 3), "jobs_per_minute": round(len(successes) / elapsed * 60, 2), "audio_seconds_per_second": round(sum(item["duration"] for item in successes) / elapsed, 3), "latency_p50_seconds": percentile(latencies, 0.5), "latency_p95_seconds": percentile(latencies, 0.95), "requests": results}
 
 
 async def monitor_workers(endpoint_id: int, samples: list, stopped: asyncio.Event):
@@ -84,14 +87,18 @@ async def main() -> None:
     parser.add_argument("--endpoint", default="ielts-qwen3-tts")
     parser.add_argument("--sizes", default="1,2,4,8")
     parser.add_argument("--jobs", type=int, help="Total requests per concurrency level; default one burst")
+    parser.add_argument("--text", default=TEXT)
+    parser.add_argument("--max-new-tokens", type=int, default=256)
     parser.add_argument("--output", default="benchmark-results.json")
     parser.add_argument("--monitor-endpoint-id", type=int, help="Sample worker scaling using the installed Vast CLI")
     args = parser.parse_args()
     sizes = [int(value) for value in args.sizes.split(",")]
     if not sizes or any(not 1 <= size <= 512 for size in sizes) or (args.jobs is not None and args.jobs < 1):
         parser.error("sizes must be 1-512 and jobs positive")
+    if not args.text.strip() or len(args.text) > 4000 or not 1 <= args.max_new_tokens <= 4096:
+        parser.error("text must contain 1-4000 characters and max-new-tokens must be 1-4096")
     client = CoroutineServerless(api_key=os.environ["VAST_API_KEY"], default_request_timeout=900)
-    results = {"backend": "vllm-omni-online", "endpoint": args.endpoint, "started_at": time.time(), "text": TEXT, "seed": 0, "max_new_tokens": 256, "runs": []}
+    results = {"backend": "vllm-omni-online", "endpoint": args.endpoint, "started_at": time.time(), "text": args.text, "seed": 0, "max_new_tokens": args.max_new_tokens, "runs": []}
     stopped = asyncio.Event()
     monitor = None
     try:
@@ -100,7 +107,7 @@ async def main() -> None:
             results["worker_samples"] = []
             monitor = asyncio.create_task(monitor_workers(args.monitor_endpoint_id, results["worker_samples"], stopped))
         for size in sizes:
-            row = await run_batch(endpoint, size, args.jobs)
+            row = await run_batch(endpoint, size, args.jobs, text=args.text, max_new_tokens=args.max_new_tokens)
             results["runs"].append(row)
             target = Path(args.output)
             target.parent.mkdir(parents=True, exist_ok=True)

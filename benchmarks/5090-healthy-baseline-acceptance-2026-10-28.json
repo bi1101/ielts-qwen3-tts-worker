@@ -1,0 +1,138 @@
+{
+  "endpoint": "ielts-qwen3-tts",
+  "eight_voice_elapsed_seconds": 758.791,
+  "counts": {
+    "succeeded": 8
+  },
+  "voices": [
+    {
+      "voice": "alex",
+      "mode": "icl",
+      "status": "succeeded",
+      "attempts": 1,
+      "endpoint_request_id": "6033",
+      "channels": 1,
+      "duration": 1.76,
+      "frames": 42240,
+      "request_id": "bbfd6498e79b54491f028cb2301ae864",
+      "sample_rate": 24000,
+      "sha256": "6ee6fee26a1295a27edc04f79ae4e36a29c4654d2e8e98a54abdd60fd2981d31"
+    },
+    {
+      "voice": "alex_xvec",
+      "mode": "xvec",
+      "status": "succeeded",
+      "attempts": 1,
+      "endpoint_request_id": "6026",
+      "channels": 1,
+      "duration": 2.32,
+      "frames": 55680,
+      "request_id": "f201b4dd83e08ec02f797998e8edf758",
+      "sample_rate": 24000,
+      "sha256": "940cc7fa11f0e13761868d8b341cd11c12fbb2ddd55ed92fa48387746be6075b"
+    },
+    {
+      "voice": "ben",
+      "mode": "icl",
+      "status": "succeeded",
+      "attempts": 1,
+      "endpoint_request_id": "6032",
+      "channels": 1,
+      "duration": 1.92,
+      "frames": 46080,
+      "request_id": "b1558e413e5051bf60c120570f301ea0",
+      "sample_rate": 24000,
+      "sha256": "fbaaa6404fbe74deb8922f66bccb0e23a1aa366ee35e403589a861705f576cb8"
+    },
+    {
+      "voice": "ben_xvec",
+      "mode": "xvec",
+      "status": "succeeded",
+      "attempts": 1,
+      "endpoint_request_id": "6029",
+      "channels": 1,
+      "duration": 1.6,
+      "frames": 38400,
+      "request_id": "d6d12471c30bf145da36d7ff774edc8f",
+      "sample_rate": 24000,
+      "sha256": "e5321c46992736a425abea8370b8d135af3bfc2ba31bd143e7b8a55cd3d768f7"
+    },
+    {
+      "voice": "jane",
+      "mode": "icl",
+      "status": "succeeded",
+      "attempts": 1,
+      "endpoint_request_id": "6028",
+      "channels": 1,
+      "duration": 1.76,
+      "frames": 42240,
+      "request_id": "92adb4faeed79df97712a1c9509780de",
+      "sample_rate": 24000,
+      "sha256": "bce2a3f56490bcc802717e41f4b0139bbd482965bd82a62c5935c2b8c4e06b49"
+    },
+    {
+      "voice": "jane_xvec",
+      "mode": "xvec",
+      "status": "succeeded",
+      "attempts": 1,
+      "endpoint_request_id": "6031",
+      "channels": 1,
+      "duration": 1.92,
+      "frames": 46080,
+      "request_id": "db2a40f044c9a699d4444864d45bfe0a",
+      "sample_rate": 24000,
+      "sha256": "6af3bf4bf56d64c2e3dbc8b5f5992ae572bd14c5e61c3a6313de77da736329b0"
+    },
+    {
+      "voice": "june",
+      "mode": "icl",
+      "status": "succeeded",
+      "attempts": 1,
+      "endpoint_request_id": "6027",
+      "channels": 1,
+      "duration": 2.08,
+      "frames": 49920,
+      "request_id": "b26137839f079bc8d17299086a4b304f",
+      "sample_rate": 24000,
+      "sha256": "01c622c58f075b22fd9add5099b4294f24d23a4aeb2177abd69e1a06517e93da"
+    },
+    {
+      "voice": "june_xvec",
+      "mode": "xvec",
+      "status": "succeeded",
+      "attempts": 1,
+      "endpoint_request_id": "6030",
+      "channels": 1,
+      "duration": 2.08,
+      "frames": 49920,
+      "request_id": "6eef6a160baa1999aafec0fa0a653722",
+      "sample_rate": 24000,
+      "sha256": "1825d9fa76855c0ece84e71d17d7a74d96dccac0c9d02e7a9a5d2eb62d2508bf"
+    }
+  ],
+  "malformed": [
+    {
+      "status": 400,
+      "passed": true
+    },
+    {
+      "status": 400,
+      "passed": true
+    },
+    {
+      "status": 400,
+      "passed": true
+    }
+  ],
+  "retry_injection": {
+    "injected": [
+      "HTTP 503",
+      "TimeoutError"
+    ],
+    "status": "succeeded",
+    "attempts": 3,
+    "endpoint_request_id": "6053",
+    "final_response_from_real_endpoint": true
+  },
+  "passed": true
+}
