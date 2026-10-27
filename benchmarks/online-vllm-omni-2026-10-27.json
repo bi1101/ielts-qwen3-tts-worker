@@ -1,0 +1,24 @@
+{
+  "backend": "vllm-omni-online",
+  "endpoint": 42781,
+  "workergroup": 53004,
+  "template_hash": "13d4289efe018325399ccfe50baf68b5",
+  "model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+  "cold_workers": 0,
+  "cold_start_seconds_observed": 364,
+  "warm_single_request_seconds": 1.18,
+  "gpu": "RTX 5090",
+  "gpu_memory_used_after_warmup_mib": 13269,
+  "all_eight_voices": {
+    "passed": true,
+    "sample_rate": 24000,
+    "voices": ["alex", "alex_xvec", "ben", "ben_xvec", "jane", "jane_xvec", "june", "june_xvec"]
+  },
+  "concurrency": [
+    {"size": 1, "elapsed_seconds": 3.155, "jobs_per_minute": 19.02},
+    {"size": 2, "elapsed_seconds": 3.260, "jobs_per_minute": 36.81},
+    {"size": 4, "elapsed_seconds": 2.943, "jobs_per_minute": 81.56},
+    {"size": 8, "elapsed_seconds": 3.086, "jobs_per_minute": 155.55}
+  ],
+  "notes": "Measured with online vLLM-Omni, eight voices rotated for concurrency. Direct-Qwen comparison was not rerun against this deployment, so no relative speed claim is made."
+}

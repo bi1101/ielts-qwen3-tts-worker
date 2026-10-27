@@ -25,6 +25,9 @@ async def run_batch(endpoint, size: int) -> dict:
         response = result["response"]
         audio = base64.b64decode(response["audio_base64"], validate=True)
         validate_wav(audio)
+        expected_mode = "xvec" if voice.endswith("_xvec") else "icl"
+        if response.get("request_id") != f"bench-{size}-{index}" or response.get("voice") != voice or response.get("mode") != expected_mode:
+            raise RuntimeError(f"metadata mismatch: {response}")
         return result
     results = await asyncio.gather(*(one(i) for i in range(size)))
     elapsed = time.perf_counter() - started
@@ -43,7 +46,7 @@ async def main() -> None:
         endpoint = await client.get_endpoint(name=args.endpoint)
         results = {"backend": "vllm-omni-online", "endpoint": args.endpoint, "runs": []}
         for size in [int(value) for value in args.sizes.split(",")]:
-            results["runs"].append(await run_batch(endpoint, size))
+        results["runs"].append(await run_batch(endpoint, size))
         with open(args.output, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2)
         print(json.dumps(results, indent=2))

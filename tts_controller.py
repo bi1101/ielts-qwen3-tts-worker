@@ -18,7 +18,6 @@ import sqlite3
 import time
 import uuid
 import wave
-import os
 from pathlib import Path
 from typing import Any
 
