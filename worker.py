@@ -6,6 +6,9 @@ import base64
 import json
 import logging
 import os
+import signal
+import sys
+import importlib.util
 import subprocess
 import time
 from contextlib import asynccontextmanager
@@ -48,8 +51,8 @@ def _write_log(message: str) -> None:
 def _vllm_command() -> list[str]:
     # v0.30.0 is pinned in the Vast template. vLLM-Omni owns batching/scheduling.
     return [
-        "vllm", "serve", MODEL_ID, "--omni", "--host", "127.0.0.1", "--port", "18000",
-        "--deploy-config", "vllm_omni/deploy/qwen3_tts.yaml", "--trust-remote-code", "--enforce-eager",
+        str(Path(sys.executable).with_name("vllm")), "serve", MODEL_ID, "--omni", "--host", "127.0.0.1", "--port", "18000",
+        "--deploy-config", str(Path(importlib.util.find_spec("vllm_omni").origin).parent / "deploy/qwen3_tts.yaml"), "--trust-remote-code", "--enforce-eager",
         "--stage-overrides", '{"0":{"max_num_seqs":8},"1":{"max_num_seqs":8}}',
     ]
 
@@ -62,7 +65,7 @@ def _validate_request(body: Any) -> dict[str, Any]:
         raise ValueError("input must be a non-empty string")
     if len(text) > MAX_TEXT:
         raise ValueError(f"input exceeds the {MAX_TEXT}-character limit")
-    if voice not in VOICES:
+    if not isinstance(voice, str) or voice not in VOICES:
         raise ValueError(f"unsupported voice: {voice}")
     expected_mode = _mode(voice)
     if body.get("mode") not in (None, expected_mode):
@@ -72,6 +75,15 @@ def _validate_request(body: Any) -> dict[str, Any]:
     request_id = body.get("request_id")
     if request_id is not None and (not isinstance(request_id, str) or not request_id.strip()):
         raise ValueError("request_id must be a non-empty string")
+    body = dict(body)
+    body.setdefault("voice", voice)
+    body.setdefault("seed", 0)
+    if not isinstance(body["seed"], int) or isinstance(body["seed"], bool) or not 0 <= body["seed"] < 2**32:
+        raise ValueError("seed must be an integer in [0, 2**32)")
+    if "max_new_tokens" in body and (type(body["max_new_tokens"]) is not int or not 1 <= body["max_new_tokens"] <= 4096):
+        raise ValueError("max_new_tokens must be an integer in [1,4096]")
+    if not isinstance(body.get("language", "Auto"), str):
+        raise ValueError("language must be a string")
     return body
 
 
@@ -92,6 +104,8 @@ async def _wait_for_vllm() -> None:
     deadline = time.monotonic() + READY_TIMEOUT
     last_error = "not started"
     while time.monotonic() < deadline:
+        if _server_process is not None and _server_process.poll() is not None:
+            raise RuntimeError(f"vLLM-Omni exited with code {_server_process.returncode}; see {MODEL_LOG_FILE}")
         try:
             async with _http_session.get(f"{VLLM_URL}/health", timeout=10) as response:
                 if response.status == 200:
@@ -137,18 +151,22 @@ async def _prepare_voices() -> None:
 
 
 async def _health(_request: aiohttp.web.Request) -> aiohttp.web.Response:
-    return aiohttp.web.json_response({"status": "ok" if _ready else "loading"}, status=200 if _ready else 503)
+    healthy = _ready and _server_process is not None and _server_process.poll() is None
+    return aiohttp.web.json_response({"status": "ok" if healthy else "loading"}, status=200 if healthy else 503)
 
 
 async def _speech(request: aiohttp.web.Request) -> aiohttp.web.Response:
     try:
-        body = _validate_request(await request.json())
+        try:
+            body = _validate_request(await request.json())
+        except (ValueError, TypeError) as exc:
+            return aiohttp.web.json_response({"error": str(exc)}, status=400)
         request_id = body.get("request_id") or f"worker-{time.time_ns()}"
         if not _ready or _http_session is None:
             raise RuntimeError("vLLM-Omni is not ready")
         async with _http_session.post(
             f"{VLLM_URL}/v1/audio/speech", json=_speech_payload(body),
-            timeout=aiohttp.ClientTimeout(total=float(body.get("timeout", 900))),
+            timeout=aiohttp.ClientTimeout(total=900),
         ) as response:
             audio = await response.read()
             if response.status != 200:
@@ -159,8 +177,6 @@ async def _speech(request: aiohttp.web.Request) -> aiohttp.web.Response:
             "format": "wav", "sample_rate": metadata["sample_rate"], "duration": metadata["duration"],
             "audio_base64": base64.b64encode(audio).decode("ascii"),
         })
-    except ValueError as exc:
-        return aiohttp.web.json_response({"error": str(exc)}, status=400)
     except Exception:
         log.exception("TTS request failed")
         return aiohttp.web.json_response({"error": "TTS generation failed"}, status=500)
@@ -194,11 +210,11 @@ async def lifecycle():
         if _http_session:
             await _http_session.close()
         if _server_process and _server_process.poll() is None:
-            _server_process.terminate()
+            os.killpg(_server_process.pid, signal.SIGTERM)
             try:
                 _server_process.wait(timeout=30)
             except subprocess.TimeoutExpired:
-                _server_process.kill()
+                os.killpg(_server_process.pid, signal.SIGKILL)
         log_file.close()
         _write_log("VLLM_OMNI_STOPPED")
 
@@ -215,8 +231,9 @@ worker_config = WorkerConfig(
         ),
     )],
     log_action_config=LogActionConfig(
-        on_load=["VLLM_OMNI_READY"], on_error=["VLLM_OMNI_FATAL_ERROR", "Traceback (most recent call last)"], on_info=["VLLM_OMNI_LOADING"],
+        on_load=["VLLM_OMNI_READY"], on_error=["VLLM_OMNI_FATAL_ERROR"], on_info=["VLLM_OMNI_LOADING"],
     ),
 )
 
-Worker(worker_config).run()
+if __name__ == "__main__":
+    Worker(worker_config).run()
