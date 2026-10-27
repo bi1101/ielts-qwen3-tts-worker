@@ -18,6 +18,7 @@ import sqlite3
 import time
 import uuid
 import wave
+import os
 from pathlib import Path
 from typing import Any
 
@@ -41,8 +42,9 @@ def estimate_cost(text: str, generation: dict[str, Any]) -> int:
 
 
 def canonical_job(text: str, voice: str, mode: str, generation: dict[str, Any]) -> tuple[str, str]:
-    payload = json.dumps({"text": text, "voice": voice, "mode": mode, "generation": generation}, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(payload.encode()).hexdigest(), payload
+    generation_json = json.dumps(generation, sort_keys=True, separators=(",", ":"))
+    identity = json.dumps({"text": text, "voice": voice, "mode": mode, "generation": generation}, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(identity.encode()).hexdigest(), generation_json
 
 
 class JobStore:
@@ -74,6 +76,7 @@ class JobStore:
         );
         CREATE INDEX IF NOT EXISTS jobs_status_idx ON jobs(status, updated_at);
         """)
+        self.db.execute("UPDATE jobs SET status='retry', error='recovered after controller restart' WHERE status='running'")
 
     def close(self) -> None:
         self.db.close()
@@ -103,7 +106,7 @@ class JobStore:
     def claim(self) -> sqlite3.Row | None:
         self.db.execute("BEGIN IMMEDIATE")
         try:
-            row = self.db.execute("SELECT * FROM jobs WHERE status IN ('queued','retry') ORDER BY created_at LIMIT 1").fetchone()
+            row = self.db.execute("SELECT * FROM jobs WHERE status='queued' OR (status='retry' AND updated_at<=?) ORDER BY created_at LIMIT 1", (now(),)).fetchone()
             if row is None:
                 self.db.execute("COMMIT")
                 return None
@@ -119,7 +122,7 @@ class JobStore:
         self.db.execute("UPDATE jobs SET status='succeeded',completed_at=?,updated_at=?,endpoint_request_id=?,output_path=?,error=? WHERE job_id=?", (now(), now(), endpoint_request_id, output_path, json.dumps(metadata, sort_keys=True), job_id))
 
     def mark_retry(self, job_id: str, error: str) -> None:
-        self.db.execute("UPDATE jobs SET status='retry',updated_at=?,error=? WHERE job_id=?", (now(), error[:4000], job_id))
+        self.db.execute("UPDATE jobs SET status='retry',updated_at=?,error=? WHERE job_id=?", (now() + 2, error[:4000], job_id))
 
     def mark_failed(self, job_id: str, error: str) -> None:
         self.db.execute("UPDATE jobs SET status='failed',completed_at=?,updated_at=?,error=? WHERE job_id=?", (now(), now(), error[:4000], job_id))
@@ -163,7 +166,7 @@ class Dispatcher:
                                 self.target += 1
                                 self.success_streak = 0
                     continue
-                if once or self.store.counts().get("queued", 0) + self.store.counts().get("retry", 0) == 0:
+                if once:
                     return
                 await asyncio.sleep(poll_seconds)
         finally:
@@ -185,7 +188,10 @@ class Dispatcher:
             target = Path(row["output_path"])
             target.parent.mkdir(parents=True, exist_ok=True)
             temp = target.with_suffix(target.suffix + ".tmp")
-            temp.write_bytes(audio)
+            with temp.open("wb") as stream:
+                stream.write(audio)
+                stream.flush()
+                os.fsync(stream.fileno())
             temp.replace(target)
             metadata.update({"voice": row["voice"], "mode": row["mode"], "request_id": row["job_id"]})
             self.store.mark_success(row["job_id"], str(result.get("request_idx", "")), str(target), metadata)
