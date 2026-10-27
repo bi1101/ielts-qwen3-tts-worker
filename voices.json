@@ -1,10 +1,54 @@
 {
-  "alex": {"file": "alex.wav", "source": "characters/Alex/voice sample.wav", "ref_text": "Hey! Ready to level up today? Alright... let's see if I can beat my last score. Ah, almost! I know I can do better. Wait... I think I've got it! Yes! That felt awesome! Don't give up. One more try—we've got this. You're getting better... but I'm still winning!", "x_vector_only_mode": false},
-  "ben": {"file": "ben.wav", "source": "characters/Ben/sample voice 2.wav", "ref_text": "Hmm... no, no, no. We discussed this yesterday. Were you paying attention at all? That's not quite right. Try again. And this time, use your brain before your keyboard. Well... I suppose that's acceptable. Don't let it go to your head. You're improving. Slowly. Painfully slowly. But improving.", "x_vector_only_mode": false},
-  "jane": {"file": "jane.wav", "source": "characters/Jane/sample voice 2.wav", "ref_text": "Hey! Ready for today's challenge? Let's do this! Wait... why does that work? That's actually really cool! Oops! I almost had it. Let me try one more time. Don't worry—we'll figure it out together! Yes! I got it! That was awesome! Come on, you're so close! Just one more question!", "x_vector_only_mode": false},
-  "june": {"file": "june.wav", "source": "characters/June/Sample voice (British).wav", "ref_text": "Good morning, dear. Ready to learn something wonderful today? Oh, that's quite alright. Mistakes are simply stepping stones to learning. Let's take it one step at a time. You'll understand it before you know it. There you go! I knew you could do it. Now, let's think carefully. What do you think happens next?", "x_vector_only_mode": false},
-  "alex_xvec": {"file": "alex.wav", "source": "characters/Alex/voice sample.wav", "ref_text": null, "x_vector_only_mode": true},
-  "ben_xvec": {"file": "ben.wav", "source": "characters/Ben/sample voice 2.wav", "ref_text": null, "x_vector_only_mode": true},
-  "jane_xvec": {"file": "jane.wav", "source": "characters/Jane/sample voice 2.wav", "ref_text": null, "x_vector_only_mode": true},
-  "june_xvec": {"file": "june.wav", "source": "characters/June/Sample voice (British).wav", "ref_text": null, "x_vector_only_mode": true}
+  "alex": {
+    "file": "alex.wav",
+    "source": "characters/Alex/voice sample.wav",
+    "ref_text": "Hey! Ready to level up today? Alright... let's see if I can beat my last score. Ah, almost! I know I can do better. Wait... I think I've got it! Yes! That felt awesome! Don't give up. One more try—we've got this. You're getting better... but I'm still winning!",
+    "x_vector_only_mode": false,
+    "source_text": "characters/Alex/ref text.txt"
+  },
+  "ben": {
+    "file": "ben.wav",
+    "source": "characters/Ben/sample voice 2.wav",
+    "ref_text": "Hmm... no, no, no. We discussed this yesterday. Were you paying attention at all? That's not quite right. Try again. And this time, use your brain before your keyboard. Well... I suppose that's acceptable. Don't let it go to your head. You're improving. Slowly. Painfully slowly. But improving.",
+    "x_vector_only_mode": false,
+    "source_text": "characters/Ben/ref text.txt"
+  },
+  "jane": {
+    "file": "jane.wav",
+    "source": "characters/Jane/sample voice 2.wav",
+    "ref_text": "Hey! Ready for today's challenge? Let's do this! Wait... why does that work? That's actually really cool! Oops! I almost had it. Let me try one more time. Don't worry—we'll figure it out together! Yes! I got it! That was awesome! Come on, you're so close! Just one more question!",
+    "x_vector_only_mode": false,
+    "source_text": "characters/Jane/reference text.txt"
+  },
+  "june": {
+    "file": "june.wav",
+    "source": "characters/June/Sample voice (British).wav",
+    "ref_text": "Good morning, dear. Ready to learn something wonderful today? Oh, that's quite alright. Mistakes are simply stepping stones to learning. Let's take it one step at a time. You'll understand it before you know it. There you go! I knew you could do it. Now, let's think carefully. What do you think happens next?",
+    "x_vector_only_mode": false,
+    "source_text": "characters/June/reference text.txt"
+  },
+  "alex_xvec": {
+    "file": "alex.wav",
+    "source": "characters/Alex/voice sample.wav",
+    "ref_text": null,
+    "x_vector_only_mode": true
+  },
+  "ben_xvec": {
+    "file": "ben.wav",
+    "source": "characters/Ben/sample voice 2.wav",
+    "ref_text": null,
+    "x_vector_only_mode": true
+  },
+  "jane_xvec": {
+    "file": "jane.wav",
+    "source": "characters/Jane/sample voice 2.wav",
+    "ref_text": null,
+    "x_vector_only_mode": true
+  },
+  "june_xvec": {
+    "file": "june.wav",
+    "source": "characters/June/Sample voice (British).wav",
+    "ref_text": null,
+    "x_vector_only_mode": true
+  }
 }

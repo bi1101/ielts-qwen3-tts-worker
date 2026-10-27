@@ -1,0 +1,29 @@
+{
+  "vllm_omni": "0.30.0",
+  "voices": {
+    "alex": {
+      "audio_sha256": "bfe571637a9a93391967dc37e6e37aa1cd87576f25a32b802dd71635601ce1f7",
+      "text_sha256": "19ad0570e9e9e42d3f8efda79c6431ef8b5ea99462a21b0a88bb98cd5def3dfe",
+      "source": "characters/Alex/voice sample.wav",
+      "source_text": "characters/Alex/ref text.txt"
+    },
+    "ben": {
+      "audio_sha256": "3ba9eac6d94fc610751151557eb2fed664d351ccca8fa4906e8adb9e5d6c1c81",
+      "text_sha256": "3f3238a9d0cfb6178ea66488ff6f0ab556bbe6915e73fdede3a3c9d78634fad5",
+      "source": "characters/Ben/sample voice 2.wav",
+      "source_text": "characters/Ben/ref text.txt"
+    },
+    "jane": {
+      "audio_sha256": "137d5aa957987ce05e1dd504eab28c2d24ec271d494697bcb4e869419e7c7918",
+      "text_sha256": "fd1146422d88a0bb7db3e8001ff30a53c9cc8434ad66115a0f534d1ad364307f",
+      "source": "characters/Jane/sample voice 2.wav",
+      "source_text": "characters/Jane/reference text.txt"
+    },
+    "june": {
+      "audio_sha256": "de1a05709522de617d3cd8745b54fff43b868925ba8a4bd1e5723473eb38141e",
+      "text_sha256": "7ff50600596037fc781894ca48591c551384e02014e94c7c124608075a06418f",
+      "source": "characters/June/Sample voice (British).wav",
+      "source_text": "characters/June/reference text.txt"
+    }
+  }
+}

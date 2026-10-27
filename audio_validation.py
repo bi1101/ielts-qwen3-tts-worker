@@ -29,8 +29,8 @@ def validate_wav(data: bytes, expected_sample_rate: int = 24_000) -> dict[str, i
         raise AudioValidationError(f"expected 16-bit PCM, got {sample_width * 8}-bit")
     if sample_rate != expected_sample_rate:
         raise AudioValidationError(f"expected {expected_sample_rate} Hz, got {sample_rate} Hz")
-    if frames <= 0 or not raw:
-        raise AudioValidationError("WAV contains no audio frames")
+    if frames <= 0 or len(raw) != frames * channels * sample_width:
+        raise AudioValidationError("WAV contains empty or truncated audio frames")
     samples = array("h")
     samples.frombytes(raw)
     if not any(sample != 0 for sample in samples):
