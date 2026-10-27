@@ -5,6 +5,7 @@ import json
 import tempfile
 import time
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
 
 from test_benchmark import Endpoint
@@ -120,3 +121,27 @@ class AsyncQueueTests(unittest.IsolatedAsyncioTestCase):
         task.cancel()
         with self.assertRaises(asyncio.CancelledError):
             await task
+
+    async def test_dispatcher_uses_ready_worker_capacity_after_persistent_queue(self):
+        class CapacityEndpoint(Endpoint):
+            def __init__(self):
+                super().__init__()
+                self.snapshots = [
+                    [SimpleNamespace(status='idle', cur_load=100, cur_perf=5, measured_perf=0, perf=0)],
+                    [SimpleNamespace(status='idle', cur_load=100, cur_perf=5, measured_perf=0, perf=0),
+                     SimpleNamespace(status='idle', cur_load=100, cur_perf=5, measured_perf=0, perf=0)],
+                ]
+
+            async def get_workers(self):
+                return self.snapshots.pop(0)
+
+        endpoint = CapacityEndpoint()
+        dispatcher = Dispatcher(self.store, concurrency=16, max_concurrency=128, worker_poll_seconds=.001)
+        await dispatcher._refresh_capacity(endpoint, force=True)
+        self.assertEqual(dispatcher.ready_workers, 1)
+        self.assertEqual(dispatcher.target, 16)
+        await asyncio.sleep(.002)
+        await dispatcher._refresh_capacity(endpoint, force=True)
+        self.assertEqual(dispatcher.ready_workers, 2)
+        self.assertEqual(dispatcher.target, 32)
+        self.assertGreater(dispatcher.estimated_queue_seconds, 10)

@@ -58,12 +58,12 @@ Only WAV output is supported. Requests accept `input`, `voice`, `response_format
 pip install -r requirements.txt
 # Set VAST_API_KEY in your shell without committing it.
 python tts_controller.py --db jobs.sqlite3 enqueue --voice alex --text 'Hello'
-python tts_controller.py --db jobs.sqlite3 run --concurrency 128 --max-concurrency 256
+python tts_controller.py --db jobs.sqlite3 run --concurrency 16 --max-concurrency 128
 # Continue polling for new jobs after the queue drains:
-python tts_controller.py --db jobs.sqlite3 run --continuous --concurrency 128 --max-concurrency 256
+python tts_controller.py --db jobs.sqlite3 run --continuous --concurrency 16 --max-concurrency 128
 ```
 
-Use 16 concurrent requests when benchmarking one warm RTX 5090. The pool default starts at 128 with a configurable ceiling of 256; AIMD reduces concurrency on retryable failures. Both can be set up to 512. A larger in-flight count is queue depth, not a guarantee of more simultaneous GPU generation.
+The controller starts with 16 in-flight jobs when no worker is ready, then targets 16 jobs per ready worker up to 128 by default. It estimates queue time from each ready worker's reported `cur_load / throughput`, and expands only after that estimate exceeds 10 seconds for two consecutive five-second capacity polls; it shrinks immediately when ready capacity falls. Vast's endpoint autoscaler independently uses `target_queue_time=10`, `cold_workers=0` and its 300-second inactivity timeout. AIMD still reduces concurrency on retryable failures. A larger in-flight count is queue depth, not a guarantee of more simultaneous GPU generation.
 
 `JobStore.enqueue(text, voice, mode, generation, output_path=None)` also accepts jobs from another local producer process. SQLite WAL with FULL synchronization stores canonical job hashes, attempts, timestamps, route request IDs, retry deadlines, output locations, metadata and errors. One dispatcher per database holds an OS file lock. Keep this database on persistent local storage; it is not a distributed queue for multiple hosts.
 

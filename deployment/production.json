@@ -11,7 +11,7 @@
   "vast_sdk_version": "1.9.1",
   "cold_workers": 0,
   "max_workers": 8,
-  "target_queue_time_seconds": 5,
+  "target_queue_time_seconds": 10,
   "max_queue_time_seconds": 600,
   "inactivity_timeout_seconds": 300,
   "max_num_seqs_per_stage": 8,

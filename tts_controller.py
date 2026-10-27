@@ -165,13 +165,67 @@ def tracked_endpoint(endpoint, store):
 
 
 class Dispatcher:
-    def __init__(self, store, endpoint_name="ielts-qwen3-tts", concurrency=128, max_concurrency=256, max_attempts=5, request_timeout=900):
+    def __init__(self, store, endpoint_name="ielts-qwen3-tts", concurrency=16, max_concurrency=128, max_attempts=5, request_timeout=900,
+                 jobs_per_worker=16, queue_threshold_seconds=10.0, queue_persistence_samples=2, worker_poll_seconds=5.0):
         if not 1 <= concurrency <= max_concurrency <= 512 or max_attempts < 1 or request_timeout <= 0:
             raise ValueError("require 1 <= concurrency <= max_concurrency <= 512, positive attempts and timeout")
+        if jobs_per_worker < 1 or queue_threshold_seconds <= 0 or queue_persistence_samples < 1 or worker_poll_seconds <= 0:
+            raise ValueError("require positive worker capacity, queue threshold, persistence samples and poll interval")
         self.store, self.endpoint_name = store, endpoint_name
         self.target, self.max_target = concurrency, max_concurrency
         self.max_attempts, self.request_timeout = max_attempts, request_timeout
+        self.jobs_per_worker = jobs_per_worker
+        self.queue_threshold_seconds = queue_threshold_seconds
+        self.queue_persistence_samples = queue_persistence_samples
+        self.worker_poll_seconds = worker_poll_seconds
+        self.ready_workers = 0
+        self.estimated_queue_seconds = 0.0
+        self._queue_high_streak = 0
+        self._next_worker_poll = 0.0
         self.success_streak = 0
+
+    async def _refresh_capacity(self, endpoint, force=False) -> None:
+        """Follow Vast's ready-worker capacity without creating idle client work."""
+        now = time.monotonic()
+        if not force and now < self._next_worker_poll:
+            return
+        self._next_worker_poll = now + self.worker_poll_seconds
+        get_workers = getattr(endpoint, "get_workers", None)
+        if get_workers is None:
+            # Unit-test doubles and older SDKs cannot expose worker state.
+            self.ready_workers = 0
+            return
+        try:
+            workers = await get_workers()
+        except Exception:
+            # Routing remains safe if the observability call is temporarily unavailable.
+            self.ready_workers = 0
+            self.estimated_queue_seconds = float("inf") if self.target else 0.0
+            return
+        ready_states = {"idle", "ready", "working", "busy"}
+        ready = [worker for worker in workers if str(getattr(worker, "status", "")).lower() in ready_states]
+        self.ready_workers = len(ready)
+        queue_times = []
+        for worker in ready:
+            load = max(float(getattr(worker, "cur_load", 0.0)), 0.0)
+            throughput = max(
+                float(getattr(worker, "cur_perf", 0.0)),
+                float(getattr(worker, "measured_perf", 0.0)),
+                float(getattr(worker, "perf", 0.0)),
+                0.0,
+            )
+            queue_times.append(load / throughput if throughput else (float("inf") if load else 0.0))
+        self.estimated_queue_seconds = max(queue_times, default=(float("inf") if self.target and not ready else 0.0))
+        if self.estimated_queue_seconds > self.queue_threshold_seconds:
+            self._queue_high_streak += 1
+        else:
+            self._queue_high_streak = 0
+        capacity_target = min(self.max_target, max(self.jobs_per_worker, self.jobs_per_worker * self.ready_workers))
+        # Do not fill newly available GPUs until Vast's queue estimate is persistently high.
+        if capacity_target > self.target and self._queue_high_streak >= self.queue_persistence_samples:
+            self.target = capacity_target
+        elif capacity_target < self.target:
+            self.target = capacity_target
 
     async def run(self, once=False, poll_seconds=1.0, endpoint=None) -> None:
         client = None
@@ -185,6 +239,7 @@ class Dispatcher:
                     client = CoroutineServerless(api_key=os.environ["VAST_API_KEY"], default_request_timeout=self.request_timeout)
                     endpoint = tracked_endpoint(await client.get_endpoint(name=self.endpoint_name), self.store)
                 while True:
+                    await self._refresh_capacity(endpoint)
                     while len(active) < self.target and (row := self.store.claim(self.max_attempts)) is not None:
                         active.add(asyncio.create_task(self._process(endpoint, row)))
                     if active:
@@ -260,10 +315,14 @@ def main() -> None:
     enqueue.add_argument("--seed", type=int, default=0)
     run = sub.add_parser("run")
     run.add_argument("--endpoint", default="ielts-qwen3-tts")
-    run.add_argument("--concurrency", type=int, default=128)
-    run.add_argument("--max-concurrency", type=int, default=256)
+    run.add_argument("--concurrency", type=int, default=16, help="Bootstrap in-flight jobs when no worker is ready")
+    run.add_argument("--max-concurrency", type=int, default=128, help="Hard cap; default is 16 jobs per eight-worker pool")
     run.add_argument("--max-attempts", type=int, default=5)
     run.add_argument("--request-timeout", type=float, default=900)
+    run.add_argument("--jobs-per-ready-worker", type=int, default=16)
+    run.add_argument("--queue-threshold-seconds", type=float, default=10.0)
+    run.add_argument("--queue-persistence-samples", type=int, default=2)
+    run.add_argument("--worker-poll-seconds", type=float, default=5.0)
     run.add_argument("--continuous", action="store_true")
     args = parser.parse_args()
     store = JobStore(args.db, args.output_dir)
@@ -272,7 +331,12 @@ def main() -> None:
             job_id, created = store.enqueue(args.text, args.voice, args.mode, {"language": args.language, "max_new_tokens": args.max_new_tokens, "seed": args.seed})
             print(json.dumps({"job_id": job_id, "created": created}))
         else:
-            asyncio.run(Dispatcher(store, args.endpoint, args.concurrency, args.max_concurrency, args.max_attempts, args.request_timeout).run(once=not args.continuous))
+            asyncio.run(Dispatcher(
+                store, args.endpoint, args.concurrency, args.max_concurrency,
+                args.max_attempts, args.request_timeout, args.jobs_per_ready_worker,
+                args.queue_threshold_seconds, args.queue_persistence_samples,
+                args.worker_poll_seconds,
+            ).run(once=not args.continuous))
             print(json.dumps(store.counts(), sort_keys=True))
     finally:
         store.close()
