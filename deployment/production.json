@@ -14,10 +14,18 @@
   "target_queue_time_seconds": 10,
   "max_queue_time_seconds": 600,
   "inactivity_timeout_seconds": 300,
-  "max_num_seqs_per_stage": 8,
+  "max_num_seqs_per_stage": 16,
   "disk_gb": 50,
   "worker_port": 3000,
   "adapter_port": 18001,
   "engine_port": 18000,
-  "search_params": "gpu_ram>=24 cpu_ram>=32 num_gpus=1 compute_cap>=890 inet_down>100 direct_port_count>=1 verified=true rentable=true external=false"
+  "search_params": "gpu_ram>=24 cpu_ram>=32 num_gpus=1 compute_cap>=890 inet_down>100 direct_port_count>=1 verified=true rentable=true external=false",
+  "decode_cudagraph_batch_sizes": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "decoder_batch_max_size": 4,
+  "tuning_basis": "single RTX 5090: 16 sequences and CUDA graphs"
 }
