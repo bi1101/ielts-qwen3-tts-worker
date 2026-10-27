@@ -5,118 +5,116 @@ import base64
 import io
 import json
 import logging
-import threading
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
 import aiohttp.web
-import soundfile as sf
-import torch
-from qwen_tts import Qwen3TTSModel
 from vastai import BenchmarkConfig, HandlerConfig, LogActionConfig, Worker, WorkerConfig
 
+from audio_validation import validate_wav
+from batch_engine import BatchEngine
+from inference_backend import DirectQwenBackend
+
 ROOT = Path(__file__).resolve().parent
-MODEL_ID = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
 MODEL_SERVER_URL = "http://127.0.0.1"
 MODEL_SERVER_PORT = 18000
 MODEL_LOG_FILE = "/workspace/qwen-tts.log"
 MODEL_HEALTH_ENDPOINT = "/health"
+MODEL_ID = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
+MAX_BATCH_SIZE = int(os.getenv("TTS_MAX_BATCH_SIZE", "4"))
+MAX_WAIT_MS = int(os.getenv("TTS_MAX_WAIT_MS", "35"))
 
 log = logging.getLogger("qwen3-tts-worker")
-_model: Qwen3TTSModel | None = None
-_prompts: dict[str, Any] = {}
-_model_lock = threading.Lock()
+_model_ready = False
 _http_runner: aiohttp.web.AppRunner | None = None
+_engine: BatchEngine | None = None
 
-with (ROOT / "voices.json").open() as f:
-    VOICES = json.load(f)
+with (ROOT / "voices.json").open(encoding="utf-8") as f:
+    VOICES: dict[str, dict[str, Any]] = json.load(f)
 
 
-def _write_log(line: str) -> None:
+def write_log(message: str) -> None:
     Path(MODEL_LOG_FILE).parent.mkdir(parents=True, exist_ok=True)
     with open(MODEL_LOG_FILE, "a", encoding="utf-8") as f:
-        f.write(line + "\n")
+        f.write(message + "\n")
 
 
-def _load_model() -> None:
-    global _model, _prompts
-    _write_log("QWEN_TTS_LOADING")
-    _model = Qwen3TTSModel.from_pretrained(
-        MODEL_ID,
-        device_map="cuda:0",
-        dtype=torch.bfloat16,
-    )
-    _prompts = {}
-    for voice, config in VOICES.items():
-        _prompts[voice] = _model.create_voice_clone_prompt(
-            ref_audio=str(ROOT / "voices" / config["file"]),
-            ref_text=config["ref_text"],
-            x_vector_only_mode=config["x_vector_only_mode"],
-        )
-    _write_log("QWEN_TTS_READY")
-
-
-def _generate(body: dict[str, Any]) -> tuple[bytes, int]:
+def validate_payload(body: dict[str, Any]) -> None:
+    if not isinstance(body, dict):
+        raise ValueError("request must be a JSON object")
     text = body.get("input")
     voice = body.get("voice", "alex")
-    response_format = body.get("response_format", "wav")
-    language = body.get("language", "Auto")
     if not isinstance(text, str) or not text.strip():
         raise ValueError("input must be a non-empty string")
-    if voice not in _prompts:
-        raise ValueError(f"unknown voice: {voice}")
-    if response_format not in ("wav", "wave"):
-        raise ValueError("Qwen3-TTS worker currently returns response_format=wav")
-    with _model_lock:
-        if _model is None:
-            raise RuntimeError("model is not loaded")
-        with torch.inference_mode():
-            wavs, sample_rate = _model.generate_voice_clone(
-                text=text,
-                language=language,
-                voice_clone_prompt=_prompts[voice],
-                max_new_tokens=int(body.get("max_new_tokens", 2048)),
-            )
-        output = io.BytesIO()
-        sf.write(output, wavs[0], sample_rate, format="WAV", subtype="PCM_16")
-        return output.getvalue(), sample_rate
+    if len(text) > 4_000:
+        raise ValueError("input exceeds the 4000-character limit")
+    if voice not in VOICES:
+        raise ValueError(f"unsupported voice: {voice}")
+    requested_mode = body.get("mode")
+    actual_mode = "xvec" if voice.endswith("_xvec") else "icl"
+    if requested_mode is not None and requested_mode != actual_mode:
+        raise ValueError(f"voice {voice} requires mode={actual_mode}")
+    if body.get("response_format", "wav") not in ("wav", "wave"):
+        raise ValueError("response_format must be wav")
 
 
 async def health(_request: aiohttp.web.Request) -> aiohttp.web.Response:
-    ready = _model is not None
-    return aiohttp.web.json_response({"status": "ok" if ready else "loading"}, status=200 if ready else 503)
+    return aiohttp.web.json_response({"status": "ok" if _model_ready else "loading"}, status=200 if _model_ready else 503)
 
 
 async def speech(request: aiohttp.web.Request) -> aiohttp.web.Response:
     try:
         body = await request.json()
-        audio, sample_rate = await asyncio.to_thread(_generate, body)
+        validate_payload(body)
+        body.setdefault("request_id", f"worker-{id(request)}")
+        body.setdefault("language", "Auto")
+        if _engine is None:
+            raise RuntimeError("batch engine is not ready")
+        result = await _engine.submit(body)
+        metadata = validate_wav(result["audio"], expected_sample_rate=result["sample_rate"])
+        return aiohttp.web.json_response({
+            "request_id": body["request_id"],
+            "voice": body["voice"],
+            "mode": "xvec" if body["voice"].endswith("_xvec") else "icl",
+            "format": "wav",
+            "sample_rate": result["sample_rate"],
+            "duration": metadata["duration"],
+            "audio_base64": base64.b64encode(result["audio"]).decode("ascii"),
+        })
     except ValueError as exc:
         return aiohttp.web.json_response({"error": str(exc)}, status=400)
     except Exception:
         log.exception("TTS request failed")
         return aiohttp.web.json_response({"error": "TTS generation failed"}, status=500)
-    return aiohttp.web.json_response({"audio_base64": base64.b64encode(audio).decode("ascii"), "sample_rate": sample_rate, "format": "wav", "voice": body.get("voice", "alex")})
 
 
 @asynccontextmanager
 async def lifecycle():
-    global _http_runner
-    await asyncio.to_thread(_load_model)
+    global _model_ready, _http_runner, _engine
+    write_log("QWEN_TTS_LOADING")
+    backend = DirectQwenBackend(MODEL_ID)
+    backend.load(VOICES, ROOT / "voices")
+    _engine = BatchEngine(backend, MAX_BATCH_SIZE, MAX_WAIT_MS)
+    await _engine.start()
     app = aiohttp.web.Application()
     app.router.add_get("/health", health)
     app.router.add_post("/v1/audio/speech", speech)
     _http_runner = aiohttp.web.AppRunner(app)
     await _http_runner.setup()
-    site = aiohttp.web.TCPSite(_http_runner, "127.0.0.1", MODEL_SERVER_PORT)
-    await site.start()
+    await aiohttp.web.TCPSite(_http_runner, "127.0.0.1", MODEL_SERVER_PORT).start()
+    _model_ready = True
+    write_log("QWEN_TTS_READY")
     try:
         yield
     finally:
-        if _http_runner is not None:
+        _model_ready = False
+        if _engine:
+            await _engine.close()
+        if _http_runner:
             await _http_runner.cleanup()
-        _write_log("QWEN_TTS_STOPPED")
+        write_log("QWEN_TTS_STOPPED")
 
 
 worker_config = WorkerConfig(
@@ -128,9 +126,9 @@ worker_config = WorkerConfig(
     handlers=[
         HandlerConfig(
             route="/v1/audio/speech",
-            allow_parallel_requests=False,
+            allow_parallel_requests=True,
             max_queue_time=600.0,
-            workload_calculator=lambda body: max(1.0, len(body.get("input", ""))),
+            workload_calculator=lambda body: max(1.0, len(body.get("input", "")) * 3.0),
             benchmark_config=BenchmarkConfig(
                 dataset=[{"input": "Ready for today's challenge?", "voice": "alex", "response_format": "wav", "language": "English"}],
                 runs=1,
