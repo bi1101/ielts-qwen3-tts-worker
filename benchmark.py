@@ -46,7 +46,7 @@ async def main() -> None:
         endpoint = await client.get_endpoint(name=args.endpoint)
         results = {"backend": "vllm-omni-online", "endpoint": args.endpoint, "runs": []}
         for size in [int(value) for value in args.sizes.split(",")]:
-        results["runs"].append(await run_batch(endpoint, size))
+            results["runs"].append(await run_batch(endpoint, size))
         with open(args.output, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2)
         print(json.dumps(results, indent=2))
