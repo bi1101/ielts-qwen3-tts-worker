@@ -11,7 +11,6 @@ import time
 import wave
 
 from audio_validation import validate_wav
-from inference_backend import probe_vllm_omni
 
 VOICES = ["alex", "alex_xvec", "ben", "ben_xvec", "jane", "jane_xvec", "june", "june_xvec"]
 
@@ -29,7 +28,7 @@ async def run_batch(endpoint, size: int) -> dict:
         return result
     results = await asyncio.gather(*(one(i) for i in range(size)))
     elapsed = time.perf_counter() - started
-    return {"batch_size": size, "elapsed_seconds": elapsed, "jobs_per_minute": size / elapsed * 60, "latencies": [round(r["latency"], 3) for r in results]}
+    return {"concurrency": size, "elapsed_seconds": elapsed, "jobs_per_minute": size / elapsed * 60, "latencies": [round(r["latency"], 3) for r in results]}
 
 
 async def main() -> None:
@@ -42,7 +41,7 @@ async def main() -> None:
     client = CoroutineServerless(api_key=os.environ["VAST_API_KEY"], default_request_timeout=900)
     try:
         endpoint = await client.get_endpoint(name=args.endpoint)
-        results = {"vllm_omni_probe": probe_vllm_omni(), "endpoint": args.endpoint, "runs": []}
+        results = {"backend": "vllm-omni-online", "endpoint": args.endpoint, "runs": []}
         for size in [int(value) for value in args.sizes.split(",")]:
             results["runs"].append(await run_batch(endpoint, size))
         with open(args.output, "w", encoding="utf-8") as f:
