@@ -57,7 +57,9 @@ class DirectQwenBackend(TTSBackend):
             raise RuntimeError("Qwen model is not loaded")
         texts = [item["input"] for item in items]
         languages = [item.get("language", "Auto") for item in items]
-        prompts = [self.prompts[item["voice"]] for item in items]
+        # create_voice_clone_prompt returns a one-item list for one reference
+        # recording; the batched API wants the prompt items themselves.
+        prompts = [self.prompts[item["voice"]][0] for item in items]
         with torch.inference_mode():
             wavs, sample_rate = self.model.generate_voice_clone(
                 text=texts,
