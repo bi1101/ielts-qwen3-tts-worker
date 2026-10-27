@@ -165,7 +165,7 @@ def tracked_endpoint(endpoint, store):
 
 
 class Dispatcher:
-    def __init__(self, store, endpoint_name="ielts-qwen3-tts", concurrency=16, max_concurrency=128, max_attempts=5, request_timeout=900):
+    def __init__(self, store, endpoint_name="ielts-qwen3-tts", concurrency=128, max_concurrency=256, max_attempts=5, request_timeout=900):
         if not 1 <= concurrency <= max_concurrency <= 512 or max_attempts < 1 or request_timeout <= 0:
             raise ValueError("require 1 <= concurrency <= max_concurrency <= 512, positive attempts and timeout")
         self.store, self.endpoint_name = store, endpoint_name
@@ -260,8 +260,8 @@ def main() -> None:
     enqueue.add_argument("--seed", type=int, default=0)
     run = sub.add_parser("run")
     run.add_argument("--endpoint", default="ielts-qwen3-tts")
-    run.add_argument("--concurrency", type=int, default=16)
-    run.add_argument("--max-concurrency", type=int, default=128)
+    run.add_argument("--concurrency", type=int, default=128)
+    run.add_argument("--max-concurrency", type=int, default=256)
     run.add_argument("--max-attempts", type=int, default=5)
     run.add_argument("--request-timeout", type=float, default=900)
     run.add_argument("--continuous", action="store_true")

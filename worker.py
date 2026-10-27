@@ -102,6 +102,12 @@ async def _prepare_voices() -> None:
 
 async def _health(_request: aiohttp.web.Request) -> aiohttp.web.Response:
     healthy = _ready and _server_process is not None and _server_process.poll() is None
+    if healthy and _http_session is not None:
+        try:
+            async with _http_session.get(f"{VLLM_URL}/health", timeout=3) as response:
+                healthy = response.status == 200
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            healthy = False
     return aiohttp.web.json_response({"status": "ok" if healthy else "loading"}, status=200 if healthy else 503)
 
 
