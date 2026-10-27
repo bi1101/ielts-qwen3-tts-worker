@@ -1,0 +1,140 @@
+[
+  {
+    "timestamp_utc": "2026-10-27 13:25:19.968",
+    "worker_id": "57964238",
+    "previous": "update_starting",
+    "status": "idle"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:25:26.675",
+    "worker_id": "57965941",
+    "previous": "update_starting",
+    "status": "destroying"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:25:33.710",
+    "worker_id": "57960012",
+    "previous": "update_starting",
+    "status": "destroying"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:25:35.757",
+    "worker_id": "57960012",
+    "previous": "unknown",
+    "status": "model_loading"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:25:40.115",
+    "worker_id": "57966073",
+    "previous": "model_loading",
+    "status": "destroying"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:25:40.115",
+    "worker_id": "57960012",
+    "previous": "model_loading",
+    "status": "destroying"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:25:42.661",
+    "worker_id": "57966075",
+    "previous": "model_loading",
+    "status": "destroying"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:26:00.389",
+    "worker_id": "0",
+    "previous": "unknown",
+    "status": "pending"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:26:00.389",
+    "worker_id": "0",
+    "previous": "unknown",
+    "status": "pending"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:26:00.481",
+    "worker_id": "0",
+    "previous": "pending",
+    "status": "error"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:26:00.715",
+    "worker_id": "57966563",
+    "previous": "pending",
+    "status": "creating"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:26:18.866",
+    "worker_id": "57966563",
+    "previous": "creating",
+    "status": "loading"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:26:43.389",
+    "worker_id": "0",
+    "previous": "unknown",
+    "status": "pending"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:26:43.483",
+    "worker_id": "0",
+    "previous": "pending",
+    "status": "error"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:26:48.389",
+    "worker_id": "0",
+    "previous": "unknown",
+    "status": "pending"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:26:48.390",
+    "worker_id": "57966070",
+    "previous": "model_loading",
+    "status": "error"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:26:48.763",
+    "worker_id": "57966637",
+    "previous": "pending",
+    "status": "creating"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:26:49.680",
+    "worker_id": "57966070",
+    "previous": "error",
+    "status": "destroying"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:27:01.962",
+    "worker_id": "57966637",
+    "previous": "creating",
+    "status": "created"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:27:16.364",
+    "worker_id": "57966071",
+    "previous": "model_loading",
+    "status": "idle"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:27:51.891",
+    "worker_id": "57966563",
+    "previous": "loading",
+    "status": "model_loading"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:27:51.891",
+    "worker_id": "57966637",
+    "previous": "created",
+    "status": "loading"
+  },
+  {
+    "timestamp_utc": "2026-10-27 13:28:13.459",
+    "worker_id": "57966637",
+    "previous": "loading",
+    "status": "model_loading"
+  }
+]

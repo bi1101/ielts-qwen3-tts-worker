@@ -1,55 +1,101 @@
 # IELTS Qwen3-TTS Vast worker
 
-This worker follows Vast's PyWorker layout: the PyWorker on port `3000` is a thin JSON adapter, and it starts one online `vllm-omni:v0.30.0` server on `127.0.0.1:18000` per GPU. vLLM-Omni owns continuous batching; the controller owns durable state and bounded dispatch.
+Durable SQLite controller → native Vast Serverless routing → official PyWorker on port 3000 → online vLLM-Omni on localhost:18000 → one Qwen3-TTS model per GPU. The small localhost:18001 adapter validates requests/audio and returns JSON; vLLM-Omni owns continuous batching. `allow_parallel_requests=True` keeps PyWorker from serializing generation.
 
-## Deployment
+## Deployment and operation
 
-Use the private template attached to endpoint `ielts-qwen3-tts` (endpoint `42781`). It uses `vllm/vllm-omni:v0.30.0`, a 50 GB disk, direct SSH runtime, and the pinned worker commit. Keep endpoint `cold_workers=0`; workers are created on demand and removed after the inactivity timeout.
+TTS endpoint **42781** (`ielts-qwen3-tts`), workergroup **53004**. The original group 53002 was replaced. See [production.json](deployment/production.json) for the pinned image, worker commit, template and autoscaler settings. LLM endpoint 42668 is separate.
 
-The startup script clones this repository, installs the small adapter requirements and Vast SDK, then invokes Vast's official `start_server.sh`. The model executable and deploy YAML are resolved from the image's system Python so the bootstrap virtualenv cannot hide vLLM-Omni.
+The image pins vLLM-Omni 0.30.0/CUDA/PyTorch and Vast SDK 1.9.1. The template uses direct SSH runtime with a shell-compatible onstart script; it fetches the pinned worker and runs Vast's official bootstrap. Each GPU starts one online server with `max_num_seqs=8` per pipeline stage and eager execution. All eight precomputed voice profiles load at startup, followed by eight warmups before readiness. No reference audio or embeddings are processed per request.
 
-## API
+Keep `cold_workers=0`, `max_workers=8`, target queue time 5 seconds, maximum queue time 600 seconds and inactivity timeout 300 seconds. Cold starts include image/model download and engine startup; send enough concurrent work for the autoscaler to add replicas. Workers hold no durable job state. A stopped instance may retain a model cache and incur storage charges after GPU scale-down. Monitor stuck image pulls separately: one never-ready replica outlived the inactivity window and needed explicit removal during acceptance.
 
-Call the native Vast SDK route (the public OpenAI proxy does not expose audio routes):
+To deploy a code update, push it, create a replacement template with the pinned image and commit in `deployment/onstart.sh`, then attach it to workergroup 53004 and roll workers. This account returned `410 Gone` for template updates, so replacement templates are used. Do not put credentials in templates, source files or logs. Inject the API key through the controller environment.
+
+## Native SDK request
+
+The public OpenAI proxy does not expose audio routes. Use the native SDK:
 
 ```python
+import asyncio
+import os
 from vastai import CoroutineServerless
-client = CoroutineServerless(api_key=VAST_API_KEY)
-endpoint = await client.get_endpoint(name="ielts-qwen3-tts")
-result = await endpoint.request("/v1/audio/speech", {
-    "input": "Ready for today's challenge?",
-    "voice": "alex",                 # alex, ben, jane, june, and *_xvec
-    "mode": "icl",                   # inferred from voice when omitted
-    "response_format": "wav",
-    "language": "English",
-    "request_id": "stable-job-id",
-    "seed": 0,
-}, cost=100, timeout=900)
+from speech_contract import estimate_cost
+
+async def main():
+    client = CoroutineServerless(api_key=os.environ["VAST_API_KEY"])
+    try:
+        endpoint = await client.get_endpoint(name="ielts-qwen3-tts")
+        payload = {
+            "input": "Ready for today's challenge?",
+            "voice": "alex",
+            "response_format": "wav",
+            "language": "English",
+            "request_id": "stable-job-id",
+            "seed": 0,
+            "max_new_tokens": 256,
+        }
+        result = await endpoint.request(
+            "/v1/audio/speech", payload,
+            cost=estimate_cost(payload["input"], payload), timeout=900,
+        )
+        if not result.get("ok"):
+            raise RuntimeError(f"worker HTTP {result.get('status')}")
+        response = result["response"]
+        # JSON: request_id, voice, mode, format, sample_rate, duration, audio_base64.
+        print({key: response[key] for key in ("request_id", "voice", "mode", "duration")})
+    finally:
+        await client.close()
+
+asyncio.run(main())
 ```
 
-The adapter registers all eight clone voices once at worker startup. ICL voices use the stored reference text; `_xvec` voices use the same WAV with x-vector-only mode. It validates mono 16-bit 24 kHz non-silent WAV output and returns JSON metadata plus base64 audio.
+Only WAV output is supported. Requests accept `input`, `voice`, `response_format`, `language`, `request_id`, optional matching `mode`, and the generation fields validated in `speech_contract.py`. Invalid requests return HTTP 400. Every success contains a validated, non-silent mono PCM16 WAV at 24 kHz, with matching request/voice/mode metadata and duration.
 
 ## Durable controller
 
 ```bash
-export VAST_API_KEY=...
+pip install -r requirements.txt
+# Set VAST_API_KEY in your shell without committing it.
 python tts_controller.py --db jobs.sqlite3 enqueue --voice alex --text 'Hello'
-python tts_controller.py --db jobs.sqlite3 run --endpoint ielts-qwen3-tts --concurrency 16 --max-concurrency 64
-python tts_controller.py --db jobs.sqlite3 run --continuous --concurrency 16 --max-concurrency 64
+python tts_controller.py --db jobs.sqlite3 run --concurrency 128 --max-concurrency 256
+# Continue polling for new jobs after the queue drains:
+python tts_controller.py --db jobs.sqlite3 run --continuous --concurrency 128 --max-concurrency 256
 ```
 
-SQLite WAL stores the content hash, request ID, attempts, status, output path and error. The hash includes text, voice, mode and generation parameters. Running jobs are recovered as retries after a controller restart. Requests are bounded, costed from text and output budget, and retried for timeouts, 408, 429 and 5xx/cold-start errors. Malformed requests, unsupported voices, metadata mismatches and invalid audio are permanent failures. WAV files are fsynced before the atomic rename.
+Use 16 concurrent requests when benchmarking one warm RTX 5090. The pool default starts at 128 with a configurable ceiling of 256; AIMD reduces concurrency on retryable failures. Both can be set up to 512. A larger in-flight count is queue depth, not a guarantee of more simultaneous GPU generation.
 
-## Voices
+`JobStore.enqueue(text, voice, mode, generation, output_path=None)` also accepts jobs from another local producer process. SQLite WAL with FULL synchronization stores canonical job hashes, attempts, timestamps, route request IDs, retry deadlines, output locations, metadata and errors. One dispatcher per database holds an OS file lock. Keep this database on persistent local storage; it is not a distributed queue for multiple hosts.
 
-`voices.json` maps `alex`, `ben`, `jane`, and `june` to the reference WAV and ICL text. The four `_xvec` names share those WAVs and omit reference text. The source assets are the character files under `public/content/characters`.
+Jobs deduplicate by text, voice, mode and normalized generation parameters. Route IDs are persisted before waiting for GPU completion. Results are validated and atomically written with file/directory fsync before marking success. Restart recovery reuses completed WAV artifacts. Bounded retries with exponential backoff/jitter cover 408, 429, all 5xx, transport/timeouts and cold starts. Other HTTP 4xx are permanent failures. Invalid response audio/metadata is retried within the attempt limit. `run` drains scheduled retries; `--continuous` waits for new arrivals.
 
-## Benchmarking
+Continuous batching does **not** yield byte-identical audio for repeated fixed-seed requests. Deterministic job identity and persisted artifact reuse prevent retry results from replacing a completed output. Use a separate database/output directory when intentionally regenerating a voice/model version.
+
+## Voices and reference assets
+
+| ICL | x-vector-only | Source |
+|---|---|---|
+| alex | alex_xvec | alex reference WAV/text |
+| ben | ben_xvec | ben reference WAV/text |
+| jane | jane_xvec | jane reference WAV/text |
+| june | june_xvec | june reference WAV/text |
+
+`voices.json` records source mappings. `voices/*.wav` match the character audio under `public/content/characters`. `voice_profiles/` contains eight safetensors profiles, the upstream custom-voice manifest and source hashes. Both modes share the same speaker embedding; only ICL retains reference speech codes/text. Actual embeddings from this 1.7B checkpoint are **2048-dimensional**, rather than the 1024-dimensional example supplied initially.
+
+Rebuild profiles inside the pinned GPU image with `python build_voice_profiles.py --characters /path/to/public/content/characters`. It uses the installed vLLM-Omni precompute utility once for each source voice, then derives its x-vector variant. Commit regenerated profiles with their provenance and roll workers to use them.
+
+## Validation and benchmarks
 
 ```bash
-python benchmark.py --endpoint ielts-qwen3-tts --sizes 8,16,32,64,128 --jobs 128 --output benchmark-results.json
+python -m unittest discover -v
+python integration_check.py --output benchmarks/acceptance.json
+python benchmark.py --sizes 1,2,4,8 --output benchmarks/bursts.json
+python benchmark.py --sizes 8,16,32,64,128 --jobs 128 --output benchmarks/concurrency.json
+python benchmark.py --sizes 256 --jobs 2048 --monitor-endpoint-id 42781 --output benchmarks/scaling.json
 ```
 
-Run one request first to measure cold-start latency, repeat it for warm latency, then run each concurrency level and inspect endpoint workers/logs for scaling and GPU memory. Do not claim a throughput comparison until both backends have been measured on the same GPU and voice mix.
+Acceptance checks all eight voices, malformed requests, and injected 503/timeout retries followed by a real endpoint response. Benchmarks use bounded dispatch loops and validate every result. Reports retain metadata/hashes, never audio or credentials. Worker snapshots distinguish ready capacity from replicas still booting. For GPU readings, inspect `nvidia-smi` over the instance's registered SSH connection; do not assume every replica has the same GPU.
 
-The deployed concurrency sweep passed 640/640 requests. On one RTX 5090, throughput leveled off at concurrency 16 (~238 jobs/min); 128 in flight also succeeded but raised p95 latency to ~31s. See [the report](benchmarks/concurrency-2026-10-27.md) for the workload, per-request evidence, GPU readings, and limits. Fixed seeds did not give byte-identical audio under continuous batching.
+[The concurrency report](benchmarks/concurrency-2026-10-27.md) records the earlier single-GPU sweep. Its throughput plateau was approximately 238–242 jobs/min at concurrency 16–128. A longer pre-rollout test passed 1,024/1,024 jobs at concurrency 256, averaging 257 jobs/min, p95 61.843 seconds. These measurements use short challenge text, not long-form narration. Direct-Qwen comparison, compiled-mode tuning and subjective voice-quality assessment remain unmeasured; no relative-speed claim is made.
+
+[Final deployment results](benchmarks/final-2026-10-27.md) include all eight preloaded voices, 4,096 successful sustained jobs at concurrency 256/512, and observed processing across six workers. The 512 run averaged 556 jobs/min while replicas warmed; eight fully warm GPUs were not benchmarked.

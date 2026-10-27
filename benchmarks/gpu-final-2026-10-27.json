@@ -1,0 +1,86 @@
+[
+  {
+    "timestamp": 1793107636.1930878,
+    "worker_id": 57964238,
+    "gpu_readings": [
+      "NVIDIA GeForce RTX 5090, 12209, 47"
+    ]
+  },
+  {
+    "timestamp": 1793107656.137877,
+    "worker_id": 57964238,
+    "gpu_readings": [
+      "NVIDIA GeForce RTX 5090, 12209, 51"
+    ]
+  },
+  {
+    "timestamp": 1793107676.237994,
+    "worker_id": 57964238,
+    "gpu_readings": [
+      "NVIDIA GeForce RTX 5090, 12209, 66"
+    ]
+  },
+  {
+    "timestamp": 1793107695.867368,
+    "worker_id": 57964238,
+    "gpu_readings": [
+      "NVIDIA GeForce RTX 5090, 12209, 68"
+    ]
+  },
+  {
+    "timestamp": 1793107715.905966,
+    "worker_id": 57964238,
+    "gpu_readings": [
+      "NVIDIA GeForce RTX 5090, 12209, 49"
+    ]
+  },
+  {
+    "timestamp": 1793107735.460094,
+    "worker_id": 57964238,
+    "gpu_readings": [
+      "NVIDIA GeForce RTX 5090, 12211, 53"
+    ]
+  },
+  {
+    "timestamp": 1793107755.1549835,
+    "worker_id": 57964238,
+    "gpu_readings": [
+      "NVIDIA GeForce RTX 5090, 12211, 53"
+    ]
+  },
+  {
+    "timestamp": 1793107774.7706761,
+    "worker_id": 57964238,
+    "gpu_readings": [
+      "NVIDIA GeForce RTX 5090, 12211, 65"
+    ]
+  },
+  {
+    "timestamp": 1793107794.3696103,
+    "worker_id": 57964238,
+    "gpu_readings": [
+      "NVIDIA GeForce RTX 5090, 12211, 60"
+    ]
+  },
+  {
+    "timestamp": 1793107814.470583,
+    "worker_id": 57964238,
+    "gpu_readings": [
+      "NVIDIA GeForce RTX 5090, 12211, 67"
+    ]
+  },
+  {
+    "timestamp": 1793107834.0183184,
+    "worker_id": 57964238,
+    "gpu_readings": [
+      "NVIDIA GeForce RTX 5090, 12211, 46"
+    ]
+  },
+  {
+    "timestamp": 1793107853.6136239,
+    "worker_id": 57964238,
+    "gpu_readings": [
+      "NVIDIA GeForce RTX 5090, 12211, 49"
+    ]
+  }
+]

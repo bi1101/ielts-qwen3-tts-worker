@@ -1,0 +1,249 @@
+{
+  "backend": "vllm-omni-online",
+  "endpoint": "ielts-qwen3-tts",
+  "started_at": 1793107538.4379652,
+  "text": "Ready for today's science challenge? Think carefully, and explain how you reached your answer.",
+  "seed": 0,
+  "max_new_tokens": 256,
+  "runs": [
+    {
+      "concurrency": 1,
+      "jobs": 1,
+      "succeeded": 1,
+      "failed": 0,
+      "elapsed_seconds": 3.205,
+      "jobs_per_minute": 18.72,
+      "latency_p50_seconds": 3.204,
+      "latency_p95_seconds": 3.204,
+      "requests": [
+        {
+          "voice": "alex",
+          "request_id": "bench-1793107540922176694-1-0",
+          "status": 200,
+          "ok": true,
+          "sample_rate": 24000,
+          "duration": 5.04,
+          "audio_sha256": "200f1ce1b5601ffa1faaad14cafdd779fa6c9882e2fa271d6d04b069734e04ef",
+          "sdk_latency": 1.9974174499511719,
+          "endpoint_request_id": 1861,
+          "latency_seconds": 3.204
+        }
+      ]
+    },
+    {
+      "concurrency": 2,
+      "jobs": 2,
+      "succeeded": 2,
+      "failed": 0,
+      "elapsed_seconds": 3.263,
+      "jobs_per_minute": 36.77,
+      "latency_p50_seconds": 2.179,
+      "latency_p95_seconds": 3.262,
+      "requests": [
+        {
+          "voice": "alex",
+          "request_id": "bench-1793107544127333208-2-0",
+          "status": 200,
+          "ok": true,
+          "sample_rate": 24000,
+          "duration": 4.88,
+          "audio_sha256": "406928dc4aa471fac229e6c3b9eb15af3a2a5571587ff4654fa5575bb7510c6b",
+          "sdk_latency": 1.8740673065185547,
+          "endpoint_request_id": 1862,
+          "latency_seconds": 2.179
+        },
+        {
+          "voice": "alex_xvec",
+          "request_id": "bench-1793107544127333208-2-1",
+          "status": 200,
+          "ok": true,
+          "sample_rate": 24000,
+          "duration": 6.08,
+          "audio_sha256": "88baa118199be3fc9d54b7ac44a12d937964b0cc7639499c3e1ba94234523ae7",
+          "sdk_latency": 2.1588902473449707,
+          "endpoint_request_id": 1863,
+          "latency_seconds": 3.262
+        }
+      ]
+    },
+    {
+      "concurrency": 4,
+      "jobs": 4,
+      "succeeded": 4,
+      "failed": 0,
+      "elapsed_seconds": 3.587,
+      "jobs_per_minute": 66.9,
+      "latency_p50_seconds": 2.677,
+      "latency_p95_seconds": 3.586,
+      "requests": [
+        {
+          "voice": "alex",
+          "request_id": "bench-1793107547390864475-4-0",
+          "status": 200,
+          "ok": true,
+          "sample_rate": 24000,
+          "duration": 4.48,
+          "audio_sha256": "2ef6dc39a464fa805a96db821b0e3696d570d3a587da4d03ac484d556ef4338a",
+          "sdk_latency": 2.0714426040649414,
+          "endpoint_request_id": 1865,
+          "latency_seconds": 2.374
+        },
+        {
+          "voice": "alex_xvec",
+          "request_id": "bench-1793107547390864475-4-1",
+          "status": 200,
+          "ok": true,
+          "sample_rate": 24000,
+          "duration": 6.16,
+          "audio_sha256": "7ccb3f6d235d2936300e5dd806e7dc9ab5c04518f2e38d4d9b3611830f287082",
+          "sdk_latency": 2.408716917037964,
+          "endpoint_request_id": 1864,
+          "latency_seconds": 2.677
+        },
+        {
+          "voice": "ben",
+          "request_id": "bench-1793107547390864475-4-2",
+          "status": 200,
+          "ok": true,
+          "sample_rate": 24000,
+          "duration": 5.76,
+          "audio_sha256": "d8ce345a416f801cb32c95743841db4b083493c2668630981212ab63137bbd29",
+          "sdk_latency": 2.473133087158203,
+          "endpoint_request_id": 1866,
+          "latency_seconds": 3.501
+        },
+        {
+          "voice": "ben_xvec",
+          "request_id": "bench-1793107547390864475-4-3",
+          "status": 200,
+          "ok": true,
+          "sample_rate": 24000,
+          "duration": 6.48,
+          "audio_sha256": "9a30a79a78d560410294ed807ab5598895c6c09a8754f41b555ec423ba2b8529",
+          "sdk_latency": 2.5285961627960205,
+          "endpoint_request_id": 1867,
+          "latency_seconds": 3.586
+        }
+      ]
+    },
+    {
+      "concurrency": 8,
+      "jobs": 8,
+      "succeeded": 8,
+      "failed": 0,
+      "elapsed_seconds": 3.936,
+      "jobs_per_minute": 121.96,
+      "latency_p50_seconds": 3.017,
+      "latency_p95_seconds": 3.934,
+      "requests": [
+        {
+          "voice": "alex",
+          "request_id": "bench-1793107550978604298-8-0",
+          "status": 200,
+          "ok": true,
+          "sample_rate": 24000,
+          "duration": 5.6,
+          "audio_sha256": "330dd980cf7c31389a33a656a581e4c77b22173be99fa10c79822ae28ad25c48",
+          "sdk_latency": 2.114497184753418,
+          "endpoint_request_id": 1870,
+          "latency_seconds": 2.382
+        },
+        {
+          "voice": "alex_xvec",
+          "request_id": "bench-1793107550978604298-8-1",
+          "status": 200,
+          "ok": true,
+          "sample_rate": 24000,
+          "duration": 5.84,
+          "audio_sha256": "6f7c16c05ca2b895119fdbaff4378babbcd5eb014153927ff1230442ba0fa42e",
+          "sdk_latency": 2.2383029460906982,
+          "endpoint_request_id": 1871,
+          "latency_seconds": 2.543
+        },
+        {
+          "voice": "ben",
+          "request_id": "bench-1793107550978604298-8-2",
+          "status": 200,
+          "ok": true,
+          "sample_rate": 24000,
+          "duration": 6.24,
+          "audio_sha256": "c3855e3a2fdc7a73ca073dfa4719b6156e418b0887502d52f29c09e4bbbb1d14",
+          "sdk_latency": 2.6482980251312256,
+          "endpoint_request_id": 1868,
+          "latency_seconds": 2.914
+        },
+        {
+          "voice": "ben_xvec",
+          "request_id": "bench-1793107550978604298-8-3",
+          "status": 200,
+          "ok": true,
+          "sample_rate": 24000,
+          "duration": 6.08,
+          "audio_sha256": "1ecc653a90fc5d31a34ad253bddd2a2f0c288012dc5242d32fc32115a4c47d00",
+          "sdk_latency": 2.7452969551086426,
+          "endpoint_request_id": 1869,
+          "latency_seconds": 3.017
+        },
+        {
+          "voice": "jane",
+          "request_id": "bench-1793107550978604298-8-4",
+          "status": 200,
+          "ok": true,
+          "sample_rate": 24000,
+          "duration": 4.88,
+          "audio_sha256": "d5b11d2be1542199cef71da3f441fea2e828f52df416b876d0fbe5e6bbf78c29",
+          "sdk_latency": 2.2209665775299072,
+          "endpoint_request_id": 1873,
+          "latency_seconds": 3.44
+        },
+        {
+          "voice": "jane_xvec",
+          "request_id": "bench-1793107550978604298-8-5",
+          "status": 200,
+          "ok": true,
+          "sample_rate": 24000,
+          "duration": 6.08,
+          "audio_sha256": "a7a5aa63fb5f1a75a9207c27f0189e01d7baef208e9cb1416352af0a21b80eb7",
+          "sdk_latency": 2.57741117477417,
+          "endpoint_request_id": 1875,
+          "latency_seconds": 3.8
+        },
+        {
+          "voice": "june_xvec",
+          "request_id": "bench-1793107550978604298-8-7",
+          "status": 200,
+          "ok": true,
+          "sample_rate": 24000,
+          "duration": 6.48,
+          "audio_sha256": "7357ec0b53881ffe13e07e55b485cd65d306fa9b0deb4bb6129942d68718607d",
+          "sdk_latency": 2.7028868198394775,
+          "endpoint_request_id": 1872,
+          "latency_seconds": 3.842
+        },
+        {
+          "voice": "june",
+          "request_id": "bench-1793107550978604298-8-6",
+          "status": 200,
+          "ok": true,
+          "sample_rate": 24000,
+          "duration": 6.4,
+          "audio_sha256": "ddb2af314d72c880c607578e5906a71ba79dd61fae1d4b678a0405d671264fc9",
+          "sdk_latency": 2.6886746883392334,
+          "endpoint_request_id": 1874,
+          "latency_seconds": 3.934
+        }
+      ]
+    }
+  ],
+  "worker_samples": [
+    {
+      "timestamp": 1793107541.3852854,
+      "error": "Vast CLI monitor failed",
+      "exit_code": 1
+    }
+  ],
+  "external_worker_samples_file": "workers-final-2026-10-27.json",
+  "observed_peak_processing_workers": 1,
+  "worker_commit": "02fa3d4",
+  "template_hash": "ee15fc11df5eb83d43a63b5a45d3f306"
+}

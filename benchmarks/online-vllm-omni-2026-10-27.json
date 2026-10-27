@@ -5,7 +5,6 @@
   "template_hash": "13d4289efe018325399ccfe50baf68b5",
   "model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
   "cold_workers": 0,
-  "cold_start_seconds_observed": 364,
   "warm_single_request_seconds": 1.18,
   "gpu": "RTX 5090",
   "gpu_memory_used_after_warmup_mib": 13269,
@@ -45,7 +44,8 @@
       "jobs_per_minute": 155.55
     }
   ],
-  "notes": "Measured with online vLLM-Omni, eight voices rotated for concurrency. Direct-Qwen comparison was not rerun against this deployment, so no relative speed claim is made.",
+  "notes": "Measured with online vLLM-Omni, eight voices rotated for concurrency. Direct-Qwen comparison was not rerun against this deployment, so no relative speed claim is made. The 364-second observation covers model-server startup, not full new-worker provisioning; an earlier create-to-ready observation took approximately 629 seconds.",
   "scale_to_zero_observed": true,
-  "scale_to_zero_after_idle_seconds": 300
+  "scale_to_zero_after_idle_seconds": 300,
+  "model_server_startup_seconds_observed": 364
 }

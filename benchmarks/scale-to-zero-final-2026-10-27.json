@@ -1,0 +1,60 @@
+{
+  "observed_at": 1793108783.9804485,
+  "endpoint_id": 42781,
+  "cold_workers": 0,
+  "min_load": 0.0,
+  "inactivity_timeout": 300.0,
+  "zero_active_tts_instances": true,
+  "remaining_instances": [
+    {
+      "id": 57964238,
+      "actual_status": "exited",
+      "intended_status": "stopped",
+      "gpu_name": "RTX 5090"
+    },
+    {
+      "id": 57966071,
+      "actual_status": "exited",
+      "intended_status": "stopped",
+      "gpu_name": "RTX 5090"
+    },
+    {
+      "id": 57966563,
+      "actual_status": "exited",
+      "intended_status": "stopped",
+      "gpu_name": "RTX 5090"
+    },
+    {
+      "id": 57966637,
+      "actual_status": "exited",
+      "intended_status": "stopped",
+      "gpu_name": "RTX 5090"
+    },
+    {
+      "id": 57966794,
+      "actual_status": "exited",
+      "intended_status": "stopped",
+      "gpu_name": "RTX 5090"
+    },
+    {
+      "id": 57966795,
+      "actual_status": "exited",
+      "intended_status": "stopped",
+      "gpu_name": "RTX 5090"
+    },
+    {
+      "id": 57966843,
+      "actual_status": "exited",
+      "intended_status": "stopped",
+      "gpu_name": "RTX 5090"
+    }
+  ],
+  "automatic_shutdown_of_six_serving_replicas": true,
+  "manual_cleanup": {
+    "instance_id": 57966254,
+    "reason": "Image pull remained loading for over 20 minutes, never ready and no served jobs; stop request did not settle",
+    "action": "destroyed stateless never-ready replica",
+    "counted_as_automatic_scale_down": false
+  },
+  "note": "Stopped cache disks may still incur storage charges. This verifies serving-worker automatic idle shutdown; a stuck provisioning instance required operator cleanup."
+}

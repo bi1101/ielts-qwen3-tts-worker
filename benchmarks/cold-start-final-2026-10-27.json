@@ -1,0 +1,13 @@
+{
+  "worker_id": 57966071,
+  "gpu": "RTX 5090",
+  "worker_commit": "02fa3d4",
+  "instance_start_timestamp": 1793107257.512079,
+  "ready_timestamp_utc": "2026-10-27T13:27:16.364Z",
+  "instance_start_to_ready_seconds": 378.852,
+  "sources": [
+    "vastai show instance 57966071: start_date",
+    "vastai get endpt-logs 42781: model_loading -> idle"
+  ],
+  "notes": "Fresh worker from this rollout; includes instance loading and engine warmup. This is not a warm single-request latency. The eight acceptance jobs waited 271.482 seconds while already-starting workers loaded."
+}

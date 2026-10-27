@@ -12,7 +12,7 @@ Endpoint 42781 / group 53004, online vLLM-Omni 0.30.0, worker commit d9d67c2. En
 | 64 | 128/128 | 241.87 | 14.307s | 15.716s |
 | 128 | 128/128 | 237.25 | 16.883s | 30.894s |
 
-**Use concurrency 16 for this single RTX 5090.** Throughput plateaus there. The highest tested in-flight concurrency is 128, with zero application-level failures; this is not a discovered hard API limit. Requests above the eight active generation sequences queue within the worker/engine.
+**Use concurrency 16 for this single RTX 5090.** Throughput plateaus there. In this sweep, the highest tested in-flight concurrency was 128, with zero application-level failures; this is not a discovered hard API limit. Requests above the eight active generation sequences queue within the worker/engine.
 
 The worker monitor observed only one replica throughout. Eight replicas would provide a configured ceiling of 64 active generation sequences in the talker stage, but aggregate throughput and autoscaling to eight workers have not been measured. A warm-worker resume preceding this sweep took about 68 seconds end to end. GPU samples during the sweep reached 13,299 MiB allocated and 80% utilization.
 
@@ -28,3 +28,5 @@ python benchmark.py --sizes 8,16,32,64,128 --jobs 128 --output benchmarks/concur
 ```
 
 `concurrency-2026-10-27.json` contains each validated request and percentile summaries. `concurrency-workers-2026-10-27.jsonl` records worker snapshots; `concurrency-gpu-2026-10-27.json` records retained GPU samples.
+
+The subsequent [production rollout report](final-2026-10-27.md) includes 256/512-in-flight tests and observed multiworker processing.
