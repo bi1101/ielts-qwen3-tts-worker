@@ -20,7 +20,7 @@ MODEL_ID = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
 MODEL_SERVER_URL = "http://127.0.0.1"
 MODEL_SERVER_PORT = 18000
 MODEL_LOG_FILE = "/workspace/qwen-tts.log"
-MODEL_HEALTH_ENDPOINT = "http://127.0.0.1:18000/health"
+MODEL_HEALTH_ENDPOINT = "/health"
 
 log = logging.getLogger("qwen3-tts-worker")
 _model: Qwen3TTSModel | None = None
