@@ -51,7 +51,7 @@ def _write_log(message: str) -> None:
 def _vllm_command() -> list[str]:
     # v0.30.0 is pinned in the Vast template. vLLM-Omni owns batching/scheduling.
     return [
-        str(Path(sys.executable).with_name("vllm")), "serve", MODEL_ID, "--omni", "--host", "127.0.0.1", "--port", "18000",
+        sys.executable, "-m", "vllm.entrypoints.cli.main", "serve", MODEL_ID, "--omni", "--host", "127.0.0.1", "--port", "18000",
         "--deploy-config", str(Path(importlib.util.find_spec("vllm_omni").origin).parent / "deploy/qwen3_tts.yaml"), "--trust-remote-code", "--enforce-eager",
         "--stage-overrides", '{"0":{"max_num_seqs":8},"1":{"max_num_seqs":8}}',
     ]
