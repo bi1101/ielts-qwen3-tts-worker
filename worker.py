@@ -9,6 +9,7 @@ import signal
 import sys
 import importlib.util
 import json
+import re
 import subprocess
 import time
 import threading
@@ -47,6 +48,22 @@ _fatal_logged = False
 def _env_lines(name: str, default: list[str]) -> list[str]:
     raw = os.getenv(name)
     return [line.strip() for line in raw.splitlines() if line.strip()] if raw else default
+
+
+class _AccessLogRedactor(logging.Filter):
+    """Prevent Vast's query-string API key from entering aiohttp access logs."""
+    _secret = re.compile(r"([?&](?:api_key|token)=)[^&\s\"]+", re.IGNORECASE)
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        original = record.getMessage()
+        message = self._secret.sub(r"\1[REDACTED]", original)
+        if message != original:
+            record.msg, record.args = message, ()
+        return True
+
+
+def _configure_log_redaction() -> None:
+    logging.getLogger("aiohttp.access").addFilter(_AccessLogRedactor())
 
 
 def _rotate_model_log() -> None:
@@ -277,4 +294,5 @@ worker_config = WorkerConfig(
 )
 
 if __name__ == "__main__":
+    _configure_log_redaction()
     Worker(worker_config).run()

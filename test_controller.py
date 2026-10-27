@@ -145,3 +145,16 @@ class AsyncQueueTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(dispatcher.ready_workers, 2)
         self.assertEqual(dispatcher.target, 32)
         self.assertGreater(dispatcher.estimated_queue_seconds, 10)
+
+    async def test_cold_start_uses_one_probe_then_restores_worker_target(self):
+        class ColdEndpoint(Endpoint):
+            async def get_workers(self):
+                return [] if not getattr(self, "ready", False) else [SimpleNamespace(status="idle", cur_load=0, cur_perf=10)]
+
+        endpoint = ColdEndpoint()
+        dispatcher = Dispatcher(self.store, concurrency=16, max_concurrency=128)
+        await dispatcher._refresh_capacity(endpoint, force=True)
+        self.assertEqual(dispatcher.target, 1)
+        endpoint.ready = True
+        await dispatcher._refresh_capacity(endpoint, force=True)
+        self.assertEqual(dispatcher.target, 16)

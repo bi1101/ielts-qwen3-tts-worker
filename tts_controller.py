@@ -166,11 +166,14 @@ def tracked_endpoint(endpoint, store):
 
 class Dispatcher:
     def __init__(self, store, endpoint_name="ielts-qwen3-tts", concurrency=16, max_concurrency=128, max_attempts=5, request_timeout=900,
-                 jobs_per_worker=16, queue_threshold_seconds=10.0, queue_persistence_samples=2, worker_poll_seconds=5.0):
+                 jobs_per_worker=16, queue_threshold_seconds=10.0, queue_persistence_samples=2, worker_poll_seconds=5.0,
+                 bootstrap_concurrency=1):
         if not 1 <= concurrency <= max_concurrency <= 512 or max_attempts < 1 or request_timeout <= 0:
             raise ValueError("require 1 <= concurrency <= max_concurrency <= 512, positive attempts and timeout")
         if jobs_per_worker < 1 or queue_threshold_seconds <= 0 or queue_persistence_samples < 1 or worker_poll_seconds <= 0:
             raise ValueError("require positive worker capacity, queue threshold, persistence samples and poll interval")
+        if not 1 <= bootstrap_concurrency <= concurrency:
+            raise ValueError("bootstrap concurrency must be between 1 and concurrency")
         self.store, self.endpoint_name = store, endpoint_name
         self.target, self.max_target = concurrency, max_concurrency
         self.max_attempts, self.request_timeout = max_attempts, request_timeout
@@ -183,6 +186,8 @@ class Dispatcher:
         self._queue_high_streak = 0
         self._next_worker_poll = 0.0
         self.success_streak = 0
+        self.bootstrap_concurrency = bootstrap_concurrency
+        self._waiting_for_ready = False
 
     async def _refresh_capacity(self, endpoint, force=False) -> None:
         """Follow Vast's ready-worker capacity without creating idle client work."""
@@ -200,11 +205,21 @@ class Dispatcher:
         except Exception:
             # Routing remains safe if the observability call is temporarily unavailable.
             self.ready_workers = 0
+            self.target = min(self.target, self.bootstrap_concurrency)
+            self._waiting_for_ready = True
             self.estimated_queue_seconds = float("inf") if self.target else 0.0
             return
         ready_states = {"idle", "ready", "working", "busy"}
         ready = [worker for worker in workers if str(getattr(worker, "status", "")).lower() in ready_states]
         self.ready_workers = len(ready)
+        if not ready:
+            # One request wakes Vast's autoscaler; queueing the whole bootstrap
+            # target only creates avoidable no-ready-worker retries.
+            self.target = min(self.target, self.bootstrap_concurrency)
+            self._waiting_for_ready = True
+        elif self._waiting_for_ready:
+            self.target = min(self.max_target, max(self.jobs_per_worker, self.jobs_per_worker * self.ready_workers))
+            self._waiting_for_ready = False
         queue_times = []
         for worker in ready:
             load = max(float(getattr(worker, "cur_load", 0.0)), 0.0)
@@ -320,6 +335,7 @@ def main() -> None:
     run.add_argument("--max-attempts", type=int, default=5)
     run.add_argument("--request-timeout", type=float, default=900)
     run.add_argument("--jobs-per-ready-worker", type=int, default=16)
+    run.add_argument("--bootstrap-concurrency", type=int, default=1, help="In-flight jobs used to wake a cold endpoint")
     run.add_argument("--queue-threshold-seconds", type=float, default=10.0)
     run.add_argument("--queue-persistence-samples", type=int, default=2)
     run.add_argument("--worker-poll-seconds", type=float, default=5.0)
@@ -335,7 +351,7 @@ def main() -> None:
                 store, args.endpoint, args.concurrency, args.max_concurrency,
                 args.max_attempts, args.request_timeout, args.jobs_per_ready_worker,
                 args.queue_threshold_seconds, args.queue_persistence_samples,
-                args.worker_poll_seconds,
+                args.worker_poll_seconds, args.bootstrap_concurrency,
             ).run(once=not args.continuous))
             print(json.dumps(store.counts(), sort_keys=True))
     finally:

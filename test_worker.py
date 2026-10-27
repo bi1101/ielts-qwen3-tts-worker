@@ -1,6 +1,7 @@
 import unittest
 import io
 import contextlib
+import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import worker
@@ -31,3 +32,16 @@ class LoggingTests(unittest.TestCase):
         self.assertEqual(saved.getvalue(), "ready\nfailed\n")
         self.assertIn("[vllm] ready", stdout.getvalue())
         self.assertIn("[vllm] failed", stdout.getvalue())
+
+    def test_access_log_redacts_query_secrets(self):
+        record = logging.LogRecord("aiohttp.access", logging.INFO, __file__, 1, "GET /v1/audio/speech?api_key=%s HTTP/1.1", ("SECRET",), None)
+        worker._AccessLogRedactor().filter(record)
+        rendered = record.getMessage()
+        self.assertIn("[REDACTED]", rendered)
+        self.assertNotIn("SECRET", rendered)
+
+    def test_access_log_redactor_leaves_normal_messages(self):
+        record = logging.LogRecord("aiohttp.access", logging.INFO, __file__, 1, "GET /health HTTP/1.1", (), None)
+        original = record.getMessage()
+        worker._AccessLogRedactor().filter(record)
+        self.assertEqual(record.getMessage(), original)
