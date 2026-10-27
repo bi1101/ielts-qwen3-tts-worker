@@ -1,4 +1,6 @@
 import unittest
+import io
+import contextlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import worker
@@ -18,3 +20,14 @@ class VoiceReadinessTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaisesRegex(RuntimeError, "preload"):
                 await worker._prepare_voices()
             self.assertEqual(warm.await_count, 8)
+
+
+class LoggingTests(unittest.TestCase):
+    def test_model_output_is_saved_and_forwarded(self):
+        saved = io.StringIO()
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            worker._forward_model_output(io.StringIO("ready\nfailed\n"), saved)
+        self.assertEqual(saved.getvalue(), "ready\nfailed\n")
+        self.assertIn("[vllm] ready", stdout.getvalue())
+        self.assertIn("[vllm] failed", stdout.getvalue())
